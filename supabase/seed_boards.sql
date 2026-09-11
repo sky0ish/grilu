@@ -5,3 +5,6 @@ insert into public.boards (code, name, members_only, admin_only_write) values
 on conflict (code) do update set name = excluded.name, members_only = excluded.members_only, admin_only_write = excluded.admin_only_write;
 update public.boards set name = '조합원 자유게시판' where code = 'board';
 delete from public.boards where code = 'newsletter';
+
+-- 2026-09-12 추가
+insert into public.boards (code, name, members_only, admin_only_write) values ('othernews', '기타 노조 소식', false, true) on conflict (code) do nothing;

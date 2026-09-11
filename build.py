@@ -22,7 +22,7 @@ MENUS = [
         ("welfare", "조합원 복지"), ("join", "조합가입 안내"), ("location", "오시는 길"),
     ]),
     ("news", "소식마당", "노동조합의 소식과 알림을 전합니다", [
-        ("notice", "공지사항"), ("news", "노조소식"), ("statement", "성명서·보도자료"),
+        ("notice", "공지사항"), ("news", "노조소식"), ("statement", "성명서·보도자료"), ("othernews", "기타 노조 소식"),
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
         ("council", "노사협의회"), ("agreement", "단체협약"), ("law", "노동관계법령"),
@@ -334,6 +334,15 @@ def p_council(root):
     return board(root, "노사협의회", rows, intro, btn, code="council")
 
 
+def p_othernews(root):
+    rows = [(5, "경기도 공공기관 노동조합 연대회의 정기총회 결과", "노동조합", "2026-08-20", 64),
+            (4, "전국공공연구노동조합 2026 하반기 정책토론회 안내", "노동조합", "2026-08-05", 51),
+            (3, "경기도청 공무원노조, 유연근무 확대 합의", "노동조합", "2026-07-15", 93),
+            (2, "타 출연기관 임금협약 체결 현황 (2026 상반기)", "노동조합", "2026-06-28", 120),
+            (1, "공공기관 노동조합 연대 워크숍 참가 보고", "노동조합", "2026-05-30", 77)]
+    intro = '<p>다른 노동조합·연대단체의 소식과 공공기관 노동계 동향을 전합니다.</p>'
+    return board(root, "기타 노조 소식", rows, intro, code="othernews")
+
 def p_staff(root):
     intro = '<p>노동조합 운영진(집행부·대의원)이 운영 사항을 공유하는 게시판입니다. 승인된 조합원만 열람할 수 있으며 글쓰기는 관리자(운영진)만 가능합니다.</p>'
     return board(root, "운영진 게시판", None, intro, code="staff")
@@ -497,7 +506,7 @@ PAGES = {
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("community", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
-    ("community", "staff"): p_staff, ("gri", "audit"): p_audit,
+    ("community", "staff"): p_staff, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
 }
 
 # ------------------------------------------------------------------ 메인 페이지
