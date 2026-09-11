@@ -10,7 +10,7 @@ import os, re, io, json, html, zipfile, tempfile, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ZIPS = sorted(__import__("glob").glob(os.path.join(ROOT, "data", "gw", "gw_export*.zip")))
 FILES = os.path.join(ROOT, "files", "gw")
-BOARD_MAP = {"000000371": ("committee", "심의위원회 상정(안)"), "0000001yl": ("council", "노사협의회 운영규약"),
+BOARD_MAP = {"000000371": ("committee", "심의위원회 상정(안)"), "0000001yl": ("rules", "노사협의회 운영규약"),
              "0000001ym": ("council", "공고 및 회의록"), "0000001yn": ("council", "안건 제안"), "0000001hy": ("director", "노동이사 활동보고"), "00000039t": ("budget", "예산결산서")}
 
 def pdf_text(b):

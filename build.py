@@ -268,12 +268,8 @@ def p_declaration(root):
 """
 
 def p_rules(root):
-    rows = [(5, "경기연구원 노동조합 규약 (2026. 1. 개정)", "노동조합", "2026-01-15", 342),
-            (4, "선거관리규정", "노동조합", "2025-11-02", 188),
-            (3, "회계규정", "노동조합", "2025-11-02", 120),
-            (2, "대의원회 운영규정", "노동조합", "2024-03-10", 97),
-            (1, "노동조합 설립신고증", "노동조합", "2024-03-10", 210)]
-    return board(root, "규약·규정", rows, '<p>노동조합의 규약과 내부 규정을 공개합니다. 파일을 내려받아 확인하실 수 있습니다.</p>', code='rules')
+    intro = '<p>노동조합 규약·규정과 <b>노사협의회 운영규약</b>(경기연구원 그룹웨어 노사협의회 게시판에서 이관)을 공개합니다. 제목을 누르면 본문·첨부파일·규약 전문을 볼 수 있습니다.</p>'
+    return board(root, "규약·규정", gw_rows("rules", root), intro, code="rules", kwmap=gw_kwmap("rules"))
 
 def p_organization(root):
     return """
@@ -443,8 +439,8 @@ def _gw_posts(code=None):
         posts = []
     return [p for p in posts if code is None or p["code"] == code]
 
-GW_DIR = {"committee": "gri/committee", "director": "gri/director", "council": "archive/council"}
-GW_NAME = {"committee": "심의위원회", "director": "노동이사 활동보고", "council": "노사협의회"}
+GW_DIR = {"committee": "gri/committee", "director": "gri/director", "council": "archive/council", "rules": "archive/rules"}
+GW_NAME = {"committee": "심의위원회", "director": "노동이사 활동보고", "council": "노사협의회", "rules": "규약·규정"}
 
 def gw_rows(code, root):
     posts = _gw_posts(code)
