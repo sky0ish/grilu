@@ -509,6 +509,30 @@ def gw_pages():
             n += 1
     return n
 
+def search_index():
+    """전문 검색 색인 data/search_index.json: 그룹웨어 이관 글(본문+첨부 전문), 행정사무감사 회의록, 제규정"""
+    import json as _json
+    def strip(h): return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", h or ""))).strip()
+    idx = []
+    for p in _gw_posts():
+        text = p.get("body_text", "") + " " + " ".join(a.get("text", "") for a in p.get("atts", []))
+        idx.append({"l": "gw-" + p["id"], "b": GW_NAME[p["code"]], "t": p["title"], "u": f'{GW_DIR[p["code"]]}/{p["id"]}.html',
+                    "d": p["date"], "a": p["author"], "x": re.sub(r"\s+", " ", text).strip(), "f": [a["name"] for a in p.get("atts", [])]})
+    try:
+        data = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "audit.json"), encoding="utf-8"))
+    except Exception:
+        data = []
+    for r in data:
+        idx.append({"l": "audit-" + r["id"], "b": "행정사무감사", "t": f'{r["title"]} — {r["committee"]}', "u": f'gri/audit/{r["id"]}.html',
+                    "d": r["date"], "a": "경기도의회", "x": strip(r.get("body", "")), "f": []})
+    for part in _gri_rules():
+        for it in part["items"]:
+            idx.append({"l": "rule-" + it["id"], "b": "제규정 · " + part["part"], "t": it["title"], "u": f'gri/regulations/part{part["no"]}.html#r{it["id"]}',
+                        "d": "", "a": "경기연구원", "x": strip(it.get("html", "")), "f": []})
+    os.makedirs("data", exist_ok=True)
+    _json.dump(idx, open(os.path.join("data", "search_index.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    return len(idx)
+
 def p_staff(root):
     intro = '<p>노동조합 운영진(집행부·대의원)이 운영 사항을 공유하는 게시판입니다. 승인된 조합원만 열람할 수 있으며 글쓰기는 관리자(운영진)만 가능합니다.</p>'
     return board(root, "운영진 게시판", None, intro, code="staff")
@@ -952,6 +976,7 @@ def main():
     n += audit_pages()
     n += regulations_pages()
     n += gw_pages()
+    print('검색 색인', search_index(), '건')
     write("admin/index.html", simple_page("관리자", ADMIN, wide=True))
     write("admin/members.html", simple_page("회원관리", ADMIN_MEMBERS, wide=True))
     write("admin/events.html", simple_page("일정관리", ADMIN_EVENTS, wide=True))

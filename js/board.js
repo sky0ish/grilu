@@ -490,6 +490,19 @@
   }
 
 
+  // ---------- 전문 검색 색인 (data/search_index.json: 본문+첨부 전문) ----------
+  var idxCache = null;
+  function loadIndex() {
+    if (idxCache) return Promise.resolve(idxCache);
+    return fetch(DB.root + 'data/search_index.json?v=' + Math.floor(Date.now() / 3600000)).then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (j) { idxCache = j || []; return idxCache; }).catch(function () { return []; });
+  }
+  function snippet(text, q, width) {
+    var i = text.toLowerCase().indexOf(q.toLowerCase()); if (i < 0) return '';
+    var s = Math.max(0, i - width), e = Math.min(text.length, i + q.length + width);
+    return (s > 0 ? '…' : '') + text.slice(s, e) + (e < text.length ? '…' : '');
+  }
+
   // ---------- 통합 검색 ----------
   function renderSearch() {
     var tbl = document.getElementById('searchTable');
@@ -503,18 +516,30 @@
     var like = '%' + q.replace(/[%_]/g, '') + '%';
     Promise.all([DB.client.from('posts').select('id,board,title,author_name,created_at,attachments')
       .or('title.ilike.' + like + ',content.ilike.' + like)
-      .order('created_at', { ascending: false }).limit(200), loadNews()])
+      .order('created_at', { ascending: false }).limit(200), loadNews(), loadIndex()])
       .then(function (res) {
         var r = res[0];
         if (r.error) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#c33">검색에 실패했습니다: ' + esc(r.error.message) + '</td></tr>'; return; }
         var ql = q.toLowerCase();
         var newsHits = (res[1] || []).filter(function (n) { return (n.title + ' ' + n.summary).toLowerCase().indexOf(ql) >= 0; });
-        var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = r.data.length + newsHits.length;
-        if (!r.data.length && !newsHits.length) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#888">"' + esc(q) + '" 에 해당하는 자료가 없습니다.</td></tr>'; return; }
+        // 전문 색인(본문+첨부파일 표 안 글자까지) 검색
+        var idxHits = (res[2] || []).filter(function (it) { return (it.t + ' ' + it.x + ' ' + (it.f || []).join(' ')).toLowerCase().indexOf(ql) >= 0; });
+        var idxIds = {}; idxHits.forEach(function (it) { idxIds[it.l] = 1; });
+        // 색인에 있는 글은 DB 결과에서 제외(중복 방지)
+        r.data = r.data.filter(function (p) { var l = p.attachments && p.attachments.legacy_id; return !(l && idxIds[l]); });
+        var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = r.data.length + newsHits.length + idxHits.length;
+        if (!r.data.length && !newsHits.length && !idxHits.length) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#888">"' + esc(q) + '" 에 해당하는 자료가 없습니다.</td></tr>'; return; }
         var BS = String.fromCharCode(92);
         var safe = q.split('').map(function (c) { return /[A-Za-z0-9가-힣 ]/.test(c) ? c : BS + c; }).join('');
         var re = new RegExp('(' + safe + ')', 'ig');
-        tbody.innerHTML = r.data.map(function (p) {
+        var hl = function (t) { return esc(t).replace(re, '<mark style="background:#fff2a8;padding:0 2px">$1</mark>'); };
+        tbody.innerHTML = idxHits.map(function (it) {
+          var sn = snippet(it.x, q, 70); var inFile = !it.t.toLowerCase().includes(ql) && it.x.toLowerCase().indexOf(ql) >= 0;
+          return '<tr><td class="num"><span style="color:var(--primary);font-weight:600">' + esc(it.b) + '</span></td>' +
+            '<td class="tit"><a href="' + DB.root + it.u + '">' + hl(it.t) + '</a>' + (it.f && it.f.length ? ' <span title="첨부">&#128206;</span>' : '') +
+            (sn ? '<div class="note" style="font-size:13px;margin-top:3px;white-space:normal;line-height:1.5">' + (inFile ? '<span style="color:#b02a2a">[본문·첨부 전문]</span> ' : '') + hl(sn) + '</div>' : '') + '</td>' +
+            '<td class="writer">' + esc(it.a) + '</td><td class="date">' + esc(it.d) + '</td></tr>';
+        }).join('') + r.data.map(function (p) {
           var title = esc(p.title).replace(re, '<mark style="background:#fff2a8;padding:0 2px">$1</mark>');
           return '<tr><td class="num"><a href="' + listUrl(p.board) + '" style="color:var(--primary);font-weight:600">' + esc(boardName(p.board)) + '</a></td>' +
             '<td class="tit"><a href="' + viewUrl(p.id) + '">' + title + '</a>' + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</td>' +
