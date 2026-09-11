@@ -5,7 +5,7 @@ grilu.kr 정적 사이트 빌드 스크립트
 - 공통 헤더/푸터/메뉴를 한 곳(이 파일)에서 관리하고 index.html 과 모든 서브 페이지를 생성합니다.
 - 메뉴를 바꾸려면 MENUS 를, 각 페이지 본문을 바꾸려면 PAGES 의 함수를 수정하세요.
 """
-import os, html
+import os, html, re
 
 SITE = "경기연구원 노동조합"
 SITE_EN = "Gyeonggi Research Institute Labor Union"
@@ -469,13 +469,25 @@ def p_agreement(root):
     return board(root, "단체협약", rows, "<p>노사가 체결한 단체협약과 임금협약 원문을 공개합니다.</p>", code="agreement")
 
 def p_law(root):
-    rows = [(6, "노동조합 및 노동관계조정법", "국가법령정보센터", "2026-01-01", 210),
-            (5, "근로기준법", "국가법령정보센터", "2026-01-01", 340),
-            (4, "근로자참여 및 협력증진에 관한 법률 (노사협의회)", "국가법령정보센터", "2026-01-01", 155),
-            (3, "남녀고용평등과 일·가정 양립 지원에 관한 법률", "국가법령정보센터", "2026-01-01", 98),
-            (2, "산업안전보건법", "국가법령정보센터", "2026-01-01", 77),
-            (1, "지방자치단체 출자·출연 기관의 운영에 관한 법률", "국가법령정보센터", "2026-01-01", 143)]
-    return board(root, "노동관계법령", rows, '<p>조합 활동과 관련된 주요 법령입니다. 원문은 <a href="https://www.law.go.kr" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">국가법령정보센터</a>에서 확인하세요.</p>', code='law')
+    """국가법령정보센터에서 가져온 시행일·개정일 기준 (data/laws.json, tools/import_laws.py 로 갱신)"""
+    import json as _json
+    from urllib.parse import quote
+    try:
+        laws = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "laws.json"), encoding="utf-8"))
+    except Exception:
+        laws = []
+    def d8(k):  # '2026. 2. 19.' → '2026-02-19'
+        n = [int(x) for x in re.findall(r"\d+", k)]
+        return f"{n[0]}-{n[1]:02d}-{n[2]:02d}"
+    items = []
+    for name, src, info in laws:
+        if not info: continue
+        ef, no, amd, kind = info
+        items.append((d8(amd), name, f"{name} <span class='note'>(법률 제{no}호 {amd} {kind} · 시행 {ef})</span>", "https://www.law.go.kr/법령/" + quote(name)))
+    items.sort(reverse=True)
+    rows = [(len(items) - i, title, "국가법령정보센터", date, "-", link) for i, (date, _, title, link) in enumerate(items)]
+    intro = '<p>조합 활동과 관련된 주요 법령입니다. 작성일은 해당 법령의 <b>최근 개정(공포)일</b>이며, 제목을 누르면 <a href="https://www.law.go.kr" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">국가법령정보센터</a>의 현행 법령 원문이 열립니다.</p>'
+    return board(root, "노동관계법령", rows, intro, code='law')
 
 PAGES = {
     ("about", "greeting"): p_greeting, ("about", "officers"): p_officers, ("about", "history"): p_history,
