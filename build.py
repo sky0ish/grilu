@@ -29,7 +29,7 @@ MENUS = [
         ("documents", "문서자료"), ("photo", "사진자료"), ("video", "동영상"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
-        ("staff", "운영진 게시판"), ("board", "자유게시판"), ("counsel", "소통상담"),
+        ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"),
         ("calendar", "일정 달력"),
     ]),
     ("gri", "GRI", "경기연구원 관련 공개 자료", [
@@ -200,7 +200,7 @@ def p_greeting(root):
 <p>경기연구원 노동조합은 연구원 구성원의 노동 권익을 지키고, 자율적이고 창의적인 연구 환경을 만들기 위해 활동하고 있습니다.
 연구자와 직원 모두가 존중받는 일터, 공정하고 투명한 인사와 보수 제도, 그리고 일과 삶의 균형을 위해 노사가 함께 고민하고 실천하겠습니다.</p>
 <p>노동조합은 조합원 한 분 한 분의 목소리에서 출발합니다. 현장의 어려움과 제안을 언제든 노동조합에 전해 주십시오.
-소통상담, 자유게시판, 그리고 정기적인 간담회를 통해 여러분과 소통하고, 노사협의회와 교섭을 통해 실질적인 변화를 만들어가겠습니다.</p>
+소통상담, 조합원 자유게시판, 그리고 정기적인 간담회를 통해 여러분과 소통하고, 노사협의회와 교섭을 통해 실질적인 변화를 만들어가겠습니다.</p>
 <p>경기도민을 위한 정책연구라는 우리의 사명을 자랑스럽게 수행할 수 있도록, 노동조합이 든든한 울타리가 되겠습니다. 감사합니다.</p>
 <div class="box" style="text-align:right"><b>경기연구원 노동조합 위원장</b> &nbsp; <span style="font-size:20px;font-weight:800">○ ○ ○</span></div>
 <p class="note">※ 인사말 내용과 위원장 성함은 예시입니다. 실제 내용으로 교체해 주세요.</p>
@@ -543,7 +543,7 @@ def index():
       <div class="eyebrow">Your Voice Matters</div>
       <h2>당신의 고충,<br><em>노동조합이 듣겠습니다</em></h2>
       <p>소통상담은 비밀이 보장되며, 접수 후 3일 이내 담당자가 연락드립니다.</p>
-      <div class="cta"><a href="community/counsel.html" class="primary">소통상담 신청</a><a href="community/board.html" class="ghost">자유게시판</a></div>
+      <div class="cta"><a href="community/counsel.html" class="primary">소통상담 신청</a><a href="community/board.html" class="ghost">조합원 자유게시판</a></div>
     </div></div>
   </div>
   <div class="dots"></div>

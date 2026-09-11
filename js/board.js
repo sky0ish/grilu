@@ -16,7 +16,7 @@
   function boardName(code) {
     var m = { notice: '공지사항', news: '노조소식', statement: '성명서·보도자료', regulation: '규정 및 지침', council: '노사협의회',
       documents: '문서자료', agreement: '단체협약', law: '노동관계법령', rules: '규약·규정',
-      board: '자유게시판', staff: '운영진 게시판', audit: '행정사무감사', photo: '사진자료', video: '동영상' };
+      board: '조합원 자유게시판', staff: '운영진 게시판', audit: '행정사무감사', photo: '사진자료', video: '동영상' };
     return m[code] || code;
   }
   function boardSection(code) {
