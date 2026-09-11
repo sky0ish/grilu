@@ -416,3 +416,15 @@ mark.kw-hit.cur{background:#f39800;color:#fff}
 .gw-body .att-text p{margin:4px 0}
 .gw-body table{border-collapse:collapse;max-width:100%}
 .gw-body td,.gw-body th{border:1px solid #ddd;padding:4px 8px}
+
+/* 첨부 문서 변환(표 보존) */
+.doc-table{border-collapse:collapse;margin:10px 0;width:100%;font-size:14px}
+.doc-table th,.doc-table td{border:1px solid #bbb;padding:6px 8px;vertical-align:top;text-align:left}
+.doc-table th{background:#f0f3f8}
+.doc-page+.doc-page{border-top:1px dashed #ccc;margin-top:14px;padding-top:14px}
+.gw-body table{width:auto;max-width:100%}
+.gw-body .att-text table{width:100%}
+
+.board-kw{margin:0 0 18px}
+.board-kw a.kw .note{font-size:11px;color:#999;margin-left:1px}
+.board-kw a.kw.on .note,.board-kw a.kw:hover .note{color:#ffe9b0}

@@ -8,10 +8,10 @@
 """
 import os, re, io, json, html, zipfile, tempfile, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ZIP = os.path.join(ROOT, "data", "gw", "gw_export.zip")
+ZIPS = sorted(__import__("glob").glob(os.path.join(ROOT, "data", "gw", "gw_export*.zip")))
 FILES = os.path.join(ROOT, "files", "gw")
 BOARD_MAP = {"000000371": ("committee", "심의위원회 상정(안)"), "0000001yl": ("council", "노사협의회 운영규약"),
-             "0000001ym": ("council", "공고 및 회의록"), "0000001yn": ("council", "안건 제안"), "0000001hy": ("director", "노동이사 활동보고")}
+             "0000001ym": ("council", "공고 및 회의록"), "0000001yn": ("council", "안건 제안"), "0000001hy": ("director", "노동이사 활동보고"), "00000039t": ("budget", "예산결산서")}
 
 def pdf_text(b):
     import fitz
@@ -41,6 +41,19 @@ def hwpx_text(b):
             parts.append(html.unescape(x))
     return "\n".join(parts)
 
+def xlsx_text(b):
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(b), data_only=True, read_only=True); out = []
+        for ws in wb.worksheets:
+            out.append("[" + ws.title + "]")
+            for row in ws.iter_rows(values_only=True):
+                cells = [str(c) for c in row if c not in (None, "")]
+                if cells: out.append(chr(9).join(cells))
+        return chr(10).join(out)
+    except Exception as e:
+        return ""
+
 def xls_text(b):
     try:
         import xlrd
@@ -58,9 +71,111 @@ def extract(name, b):
         if ext == ".pdf": return pdf_text(b)
         if ext == ".hwp": return hwp_text(b)
         if ext == ".hwpx": return hwpx_text(b)
-        if ext in (".xls", ".xlsx"): return xls_text(b)
+        if ext == ".xls": return xls_text(b)
+        if ext == ".xlsx": return xlsx_text(b)
     except Exception as e:
         print("   ! 텍스트 추출 실패", name, e)
+    return ""
+
+# ---------- 표를 살리는 HTML 변환 ----------
+def _esc(t): return html.escape(t or "")
+
+def pdf_html(b):
+    """PDF → HTML: 표(find_tables)는 <table>, 나머지 글은 <p>. 페이지 순서·세로 위치 순으로 배치"""
+    import fitz
+    doc = fitz.open(stream=b, filetype="pdf"); out = []
+    for page in doc:
+        items = []
+        try:
+            tabs = page.find_tables()
+        except Exception:
+            tabs = None
+        boxes = []
+        if tabs:
+            for t in tabs.tables:
+                rows = t.extract()
+                if not rows or len(rows) < 2: continue
+                boxes.append(fitz.Rect(t.bbox))
+                th = "".join(f"<th>{_esc(c).replace(chr(10), '<br>')}</th>" for c in rows[0])
+                trs = "".join("<tr>" + "".join(f"<td>{_esc(c).replace(chr(10), '<br>')}</td>" for c in r) + "</tr>" for r in rows[1:])
+                items.append((t.bbox[1], f"<table class='doc-table'><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>"))
+        for blk in page.get_text("blocks"):
+            x0, y0, x1, y1, txt = blk[0], blk[1], blk[2], blk[3], blk[4]
+            r = fitz.Rect(x0, y0, x1, y1)
+            if any(r.intersects(bx) and (r & bx).get_area() > r.get_area() * 0.5 for bx in boxes): continue
+            txt = re.sub(r"[ \t]+", " ", txt).strip()
+            if not txt or re.fullmatch(r"-?\s*\d{1,3}\s*-?", txt): continue
+            items.append((y0, "".join(f"<p>{_esc(line)}</p>" for line in txt.split(chr(10)) if line.strip())))
+        items.sort(key=lambda x: x[0])
+        out.append("".join(h for _, h in items))
+    return "<div class='doc-page'>" + "</div><div class='doc-page'>".join(out) + "</div>"
+
+def hwp_html(b):
+    """HWP → HTML (pyhwp hwp5html). 표·문단 구조 유지, 스타일은 제거"""
+    from hwp5.xmlmodel import Hwp5File
+    from hwp5.hwp5html import HTMLTransform
+    tmp = tempfile.NamedTemporaryFile(suffix=".hwp", delete=False); tmp.write(b); tmp.close()
+    d = tempfile.mkdtemp(); hf = Hwp5File(tmp.name)
+    try:
+        HTMLTransform().transform_hwp5_to_dir(hf, d)
+        x = open(os.path.join(d, "index.xhtml"), encoding="utf-8").read()
+    finally:
+        try: hf.close()
+        except Exception: pass
+        try: os.unlink(tmp.name)
+        except Exception: pass
+    m = re.search(r"<body[^>]*>(.*)</body>", x, re.S); x = m.group(1) if m else x
+    x = re.sub(r"<img[^>]*>", "", x)
+    x = re.sub(r'\s(?:class|style|id|width|height|border|cellspacing|cellpadding|xmlns)="[^"]*"', "", x)
+    x = re.sub(r"<(/?)(?:span|div|font)\b[^>]*>", "", x)
+    x = re.sub(r"<p>\s*</p>", "", x)
+    x = x.replace("<table>", "<table class='doc-table'>")
+    return x.strip()
+
+def hwpx_html(b):
+    """HWPX(XML) → HTML: hp:tbl → <table>, hp:p → <p>"""
+    import xml.etree.ElementTree as ET
+    zz = zipfile.ZipFile(io.BytesIO(b)); out = []
+    NS = "{http://www.hancom.co.kr/hwpml/2011/paragraph}"
+    def ptext(p): return "".join(t.text or "" for t in p.iter(NS + "t"))
+    def walk(node, out):
+        for ch in list(node):
+            if ch.tag == NS + "tbl":
+                rows = []
+                for tr in ch.iter(NS + "tr"):
+                    cells = []
+                    for tc in tr.findall(NS + "tc"):
+                        cells.append("<br>".join(_esc(ptext(p)) for p in tc.iter(NS + "p")))
+                    rows.append("<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
+                out.append("<table class='doc-table'><tbody>" + "".join(rows) + "</tbody></table>")
+            elif ch.tag == NS + "p":
+                if ch.find(".//" + NS + "tbl") is not None:
+                    walk(ch, out)
+                else:
+                    t = ptext(ch).strip()
+                    if t: out.append(f"<p>{_esc(t)}</p>")
+            else:
+                walk(ch, out)
+    for n in sorted(zz.namelist()):
+        if n.startswith("Contents/section"):
+            try:
+                walk(ET.fromstring(zz.read(n)), out)
+            except Exception as e:
+                out.append(f"<p>{_esc(hwpx_text(zz.read(n).decode('utf-8','replace')))}</p>")
+    return "".join(out)
+
+def extract_html(name, b):
+    ext = os.path.splitext(name)[1].lower()
+    try:
+        if ext == ".pdf": return pdf_html(b)
+        if ext == ".hwp": return hwp_html(b)
+        if ext == ".hwpx": return hwpx_html(b)
+        if ext in (".xls", ".xlsx"):
+            t = extract(name, b)
+            rows = [r.split(chr(9)) for r in t.split(chr(10)) if r.strip()]
+            return "<table class='doc-table'><tbody>" + "".join("<tr>" + "".join(f"<td>{_esc(c)}</td>" for c in r) + "</tr>" for r in rows) + "</tbody></table>"
+    except Exception as e:
+        print("   ! HTML 변환 실패", name, e)
     return ""
 
 def clean_text(t):
@@ -71,8 +186,14 @@ def clean_text(t):
     return t.strip()
 
 def clean_body(h):
-    m = re.search(r'<div class="write_area">(.*?)</div>\s*(?:<div class="brdr_dbl">|<div class="comment|<div class="reply|$)', h, re.S)
-    body = m.group(1) if m else h
+    i = h.find('<div class="write_area">')
+    if i < 0: return ""
+    j = i + len('<div class="write_area">'); depth = 1
+    for m in re.finditer(r"<div\b|</div>", h[j:]):
+        depth += 1 if m.group(0).startswith("<div") else -1
+        if depth == 0: body = h[j:j + m.start()]; break
+    else:
+        body = h[j:]
     body = re.sub(r"<script.*?</script>", "", body, flags=re.S)
     body = re.sub(r'\s(?:style|class|onmouseover|onmouseout|width|height)="[^"]*"', "", body)
     body = re.sub(r"<img[^>]*>", "", body)
@@ -80,29 +201,31 @@ def clean_body(h):
     return body.strip()
 
 def main():
-    z = zipfile.ZipFile(ZIP)
-    d = json.loads(z.read("posts.json").decode("utf-8"))
-    posts = json.loads(d["posts"]) if isinstance(d["posts"], str) else d["posts"]
     os.makedirs(FILES, exist_ok=True)
     out = []
-    for p in posts:
-        if p["board"] not in BOARD_MAP: continue
-        code, sub = BOARD_MAP[p["board"]]
-        raw = z.read("raw/" + p["id"] + ".html").decode("utf-8", "replace")
-        body_html = clean_body(raw)
-        body_text = clean_text(html.unescape(re.sub(r"<[^>]+>", " ", body_html)))
-        rec = {"id": p["id"], "code": code, "sub": sub, "title": p["title"], "author": p["author"], "dept": p.get("dept", ""),
-               "date": p["date"].replace(".", "-"), "body_html": body_html, "body_text": body_text, "atts": []}
-        print(f"[{code}] {rec['date']} {p['title'][:40]}")
-        for a in p.get("atts", []):
-            if "file" not in a: continue
-            b = z.read("files/" + a["file"])
-            safe = re.sub(r'[\\/:*?"<>|]', "_", a["file"])
-            open(os.path.join(FILES, safe), "wb").write(b)
-            text = clean_text(extract(a["name"], b))
-            rec["atts"].append({"name": a["name"], "file": "files/gw/" + safe, "size": len(b), "text": text})
-            print(f"    - {a['name']} ({len(b)//1024} KB) → {len(text)}자")
-        out.append(rec)
+    for zp in ZIPS:
+      z = zipfile.ZipFile(zp)
+      d = json.loads(z.read("posts.json").decode("utf-8"))
+      posts = json.loads(d["posts"]) if isinstance(d["posts"], str) else d["posts"]
+      for p in posts:
+          if p["board"] not in BOARD_MAP: continue
+          code, sub = BOARD_MAP[p["board"]]
+          raw = z.read("raw/" + p["id"] + ".html").decode("utf-8", "replace")
+          body_html = clean_body(raw)
+          body_text = clean_text(html.unescape(re.sub(r"<[^>]+>", " ", body_html)))
+          rec = {"id": p["id"], "code": code, "sub": sub, "title": p["title"], "author": p["author"], "dept": p.get("dept", ""),
+                 "date": p["date"].replace(".", "-"), "body_html": body_html, "body_text": body_text, "atts": []}
+          print(f"[{code}] {rec['date']} {p['title'][:40]}")
+          for a in p.get("atts", []):
+              if "file" not in a: continue
+              b = z.read("files/" + a["file"])
+              safe = re.sub(r'[\\/:*?"<>|]', "_", a["file"])
+              open(os.path.join(FILES, safe), "wb").write(b)
+              text = clean_text(extract(a["name"], b))
+              ahtml = extract_html(a["name"], b) if text else ""
+              rec["atts"].append({"name": a["name"], "file": "files/gw/" + safe, "size": len(b), "text": text, "html": ahtml})
+              print(f"    - {a['name']} ({len(b)//1024} KB) → {len(text)}자")
+          out.append(rec)
     out.sort(key=lambda r: (r["date"], r["id"]), reverse=True)
     json.dump({"posts": out}, open(os.path.join(ROOT, "data", "gw_posts.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print("총", len(out), "건 → data/gw_posts.json")

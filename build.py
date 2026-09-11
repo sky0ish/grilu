@@ -172,12 +172,32 @@ def rows_html(rows, root="../", code=""):
     for i, r in enumerate(rows):
         num, title, writer, date, hit = r[:5]
         link = r[5] if len(r) > 5 else demo_href(root, title, date, writer, code)
+        legacy = f' data-legacy="{r[6]}"' if len(r) > 6 else ""
         badge = ' <span class="badge new" style="font-size:11px;color:#fff;background:#e5533c;padding:1px 6px;border-radius:3px">N</span>' if (i < 2 and len(r) <= 5) else ""
-        out.append(f'<tr><td class="num">{num}</td><td class="tit"><a href="{link}">{title}</a>{badge}</td><td class="writer">{writer}</td><td class="date">{date}</td><td class="hit">{hit}</td></tr>')
+        out.append(f'<tr{legacy}><td class="num">{num}</td><td class="tit"><a href="{link}">{title}</a>{badge}</td><td class="writer">{writer}</td><td class="date">{date}</td><td class="hit">{hit}</td></tr>')
     return "".join(out)
 
-def board(root, name, rows=None, intro="", extra_btn="", code=""):
+def board_kw_block(kwmap):
+    """kwmap: {legacy_id: keywords dict} → 게시판 전체 키워드 버튼 + 글별 키워드 JSON"""
+    import json as _json
+    from collections import Counter
+    if not kwmap: return ""
+    cnt, posts, sent = Counter(), Counter(), {}
+    simple = {}
+    for lid, kw in kwmap.items():
+        words = [w for w, n, s_ in (kw.get("top") or [])]
+        simple[lid] = words
+        for w, n, s_ in (kw.get("top") or []):
+            cnt[w] += n; posts[w] += 1; sent[w] = s_
+    top = sorted(cnt.items(), key=lambda x: (-posts[x[0]], -x[1]))[:30]
+    chips = "".join(f'<a href="#" class="kw{" pos" if sent[w] > 0 else " neg" if sent[w] < 0 else ""}" data-kw="{w}">{w} <b>{posts[w]}</b><span class="note">/{n}</span></a>' for w, n in top)
+    return (f'<div class="kw-stats board-kw"><div class="kw-title">&#128202; 이 게시판의 주요 키워드 <span class="note">(글 수/등장 횟수 · 누르면 그 키워드가 들어간 글만 표시, 다시 누르면 해제 · '
+            f'<span class="kw-legend pos">긍정어</span> <span class="kw-legend neg">부정어</span>)</span></div>{chips}'
+            f'<script type="application/json" class="board-kw-data">{_json.dumps(simple, ensure_ascii=False)}</script></div>')
+
+def board(root, name, rows=None, intro="", extra_btn="", code="", kwmap=None):
     rows = rows or [(len(SAMPLE) - i, f"[{name}] 예시 게시글 {len(SAMPLE)-i}", "노동조합", d, h) for i, (d, h) in enumerate(SAMPLE)]
+    intro = board_kw_block(kwmap) + intro
     return f"""
 {intro}
 <!--SEARCH--><form class="board-search" onsubmit="return false"><select name="f"><option value="title">제목</option><option value="content">내용</option><option value="author">작성자</option></select><input type="search" name="q" placeholder="검색어를 입력하세요"><button type="submit" class="in-board" title="이 게시판 안에서만 검색">게시판내 검색</button><button type="button" class="all-site line" title="홈페이지 전체 검색">전체 검색</button></form><!--/SEARCH-->
@@ -318,7 +338,7 @@ def p_council(root):
 <p>노사협의회 <b>공고 및 회의록</b>, <b>운영규약</b>, <b>안건 제안</b> 게시글입니다. 경기연구원 그룹웨어 노사협의회 게시판의 본문과 첨부파일(회의록 등)을 전문 그대로 옮겼습니다. 제목을 누르면 본문·첨부파일·회의록 전문을 볼 수 있습니다.</p>
 """
     btn = f'<a href="{GW_REG_URL}" target="_blank" rel="noopener" class="btn line">그룹웨어 원문 보기</a>'
-    return board(root, "노사협의회", gw_rows("council", root), intro, btn, code="council")
+    return board(root, "노사협의회", gw_rows("council", root), intro, btn, code="council", kwmap=gw_kwmap("council"))
 
 def p_othernews(root):
     """빅카인즈 자동 수집 뉴스 (data/othernews.json, tools/fetch_news.py 가 매일 갱신)"""
@@ -432,16 +452,19 @@ def gw_rows(code, root):
     for i, p in enumerate(posts):
         sub = f' <span class="note">[{p["sub"]}]</span>' if code == "council" and p["sub"] != "공고 및 회의록" else ""
         att = ' <span title="첨부">&#128206;</span>' if p["atts"] else ""
-        rows.append((len(posts) - i, p["title"] + sub + att, p["author"], p["date"], "-", f'{root}{GW_DIR[code]}/{p["id"]}.html'))
+        rows.append((len(posts) - i, p["title"] + sub + att, p["author"], p["date"], "-", f'{root}{GW_DIR[code]}/{p["id"]}.html', "gw-" + p["id"]))
     return rows
+
+def gw_kwmap(code):
+    return {"gw-" + p["id"]: p.get("keywords") or {} for p in _gw_posts(code)}
 
 def p_committee(root):
     intro = '<p>경기연구원 <b>심의위원회 상정(안)</b>과 직원 의견청취 안내입니다. 그룹웨어(제규정 &gt; 심의위원회 상정(안)) 게시글과 첨부 안건 파일의 전문을 그대로 옮겼습니다. 제목을 누르면 본문·첨부파일·첨부 문서 전문을 볼 수 있습니다.</p>'
-    return board(root, "심의위원회", gw_rows("committee", root), intro, code="committee")
+    return board(root, "심의위원회", gw_rows("committee", root), intro, code="committee", kwmap=gw_kwmap("committee"))
 
 def p_director(root):
     intro = '<p>경기연구원 <b>노동이사</b>의 활동보고와 선출 관련 공고입니다. 그룹웨어 공지 게시판에서 옮겨 왔으며, 첨부된 활동보고서 전문을 함께 볼 수 있습니다.</p>'
-    return board(root, "노동이사 활동보고", gw_rows("director", root), intro, code="director")
+    return board(root, "노동이사 활동보고", gw_rows("director", root), intro, code="director", kwmap=gw_kwmap("director"))
 
 def gw_pages():
     import json as _json, html as _html
@@ -463,7 +486,7 @@ def gw_pages():
                     for k, a in enumerate(p["atts"])) + "</ul></div>"
             att_text = "".join(
                 f'<section class="att-text" id="att{k}"><h4 class="rule-title" style="font-size:19px">&#128196; {_html.escape(a["name"])} <a href="../../{a["file"]}" download class="btn sm line" style="margin-left:8px">파일 내려받기</a></h4>'
-                + "".join(f"<p>{_html.escape(line)}</p>" for line in a["text"].split("\n") if line.strip()) + "</section>"
+                + (a.get("html") or "".join(f"<p>{_html.escape(line)}</p>" for line in a["text"].split("\n") if line.strip())) + "</section>"
                 for k, a in enumerate(p["atts"]) if a.get("text"))
             kw = _json.dumps(p.get("keywords") or {}, ensure_ascii=False)
             body = f"""
@@ -496,12 +519,13 @@ def p_audit(root):
         data = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "audit.json"), encoding="utf-8"))
     except Exception:
         data = []
-    rows = [(len(data) - i, f'{r["title"]} — {r["committee"]}', "경기도의회", r["date"], "-", f'audit/{r["id"]}.html') for i, r in enumerate(data)]
+    rows = [(len(data) - i, f'{r["title"]} — {r["committee"]}', "경기도의회", r["date"], "-", f'audit/{r["id"]}.html', "audit-" + r["id"]) for i, r in enumerate(data)]
+    kwmap = {"audit-" + r["id"]: r.get("keywords") or {} for r in data}
     intro = """
 <p>제4대(1995년)부터 제11대(2025년)까지 행정사무감사 회의록 중 경기연구원이 피감기관으로 포함된 회의입니다. 제목을 누르면 본문 전문과 원문 링크를 볼 수 있습니다.</p>
 """
     btn = '<a href="https://kms.ggc.go.kr/svc/cms/mnts/MntsTreeAuditList.do" target="_blank" rel="noopener" class="btn line">경기도의회 회의록 원문</a>'
-    return board(root, "행정사무감사", rows, intro, btn, code="audit")
+    return board(root, "행정사무감사", rows, intro, btn, code="audit", kwmap=kwmap)
 
 def audit_pages():
     import json as _json
