@@ -379,7 +379,7 @@ def audit_pages():
   <table class="tbl" style="margin-top:24px">{nav}</table>
   <div class="board-bottom" style="justify-content:space-between"><a href="../audit.html" class="btn line">목록</a><a href="{r["url"]}" target="_blank" rel="noopener" class="btn">경기도의회 원문 보기</a></div>
 </article>"""
-        write(f"gri/audit/{r['id']}.html", simple_page(f'{r["title"]} — 행정사무감사', body, wide=True))
+        write(f"gri/audit/{r['id']}.html", simple_page(f'{r["title"]} — 행정사무감사', body, wide=True, root="../../", visual="행정사무감사"))
     return len(data)
 
 def p_photo(root):
@@ -626,10 +626,9 @@ def index():
 """ + footer(root)
 
 # ------------------------------------------------------------------ 기타 페이지 (로그인 등)
-def simple_page(title, body, wide=False):
-    root = "../"
+def simple_page(title, body, wide=False, root="../", visual=None):
     return head(root, title) + header(root) + f"""
-<section class="sub-visual"><div class="wrap"><h2>{title}</h2></div></section>
+<section class="sub-visual"><div class="wrap"><h2>{visual or title}</h2></div></section>
 <div class="wrap" style="padding:50px 0 80px;{'' if wide else 'max-width:720px'}"><main class="content"><h3 class="page-title">{title}</h3>{body}</main></div>
 """ + footer(root)
 

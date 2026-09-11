@@ -87,7 +87,16 @@ python -m http.server 8765
 
 DNS 반영 후 GitHub 저장소 Settings > Pages 에서 **Enforce HTTPS** 를 켭니다. (인증서 발급까지 최대 1시간)
 
-Supabase 는 프로젝트 `ryyvwpkhlqbcsjbttxca` 에 연결되어 있고(`js/config.js`), `schema.sql` 과 `seed_council.sql` 은 이미 실행되었습니다.
+Supabase 는 프로젝트 `ryyvwpkhlqbcsjbttxca` 에 연결되어 있고(`js/config.js`), 아래 SQL 은 이미 실행되었습니다.
+`schema.sql`, `seed_council.sql`(노사협의회 27건), `seed_boards.sql`(게시판 구성), `seed_position.sql`(직급 컬럼), `seed_audit.sql`(행정사무감사 31건).
+관리자 지정은 `make_admin.sql` 을 SQL Editor 에서 실행합니다.
+
+### 배경 이미지
+`5.images/배경1.webp` → `images/hero-bg.jpg` 로 변환해 사용 중. 교체하려면 새 사진을 `images/hero-bg.jpg` 로 저장하면 됩니다.
+(사진이 없으면 `images/gen_bg_scene.py` 로 만든 `hero-bg.svg` 가 대신 표시됩니다.)
+
+### 행정사무감사 자료 갱신
+`python tools/import_audit.py` 실행 → `data/audit.json`, `supabase/seed_audit.sql` 갱신 → `python build.py` → 새 SQL 을 Supabase 에서 실행.
 
 
 정적 파일이므로 아래 중 하나로 올리면 됩니다. (`grilu-site.zip` 은 업로드용으로 사이트 파일만 묶은 것)
