@@ -281,23 +281,24 @@
       var t = document.querySelector('.page-title'); if (t) t.textContent = boardName(p.board);
       var mine = DB.user && DB.user.id === p.author_id;
       var content = /<[a-z][\s\S]*>/i.test(p.content || '') ? p.content : esc(p.content || '').replace(/\n/g, '<br>');
+      var canEdit = mine || DB.isAdmin();
+      var topBtns = canEdit ? '<div class="post-actions"><a href="' + writeUrl(p.board, p.id) + '" class="btn sm">수정</a> <a href="#" class="btn sm del-btn" style="background:#c33">삭제</a></div>' : '';
       box.innerHTML =
-        '<div class="post-head"><h4 style="border:0;padding:0;margin:0 0 8px;color:#222;font-size:24px">' + esc(p.title) + '</h4>' +
+        '<div class="post-head" style="position:relative">' + topBtns + '<h4 style="border:0;padding:0;margin:0 0 8px;color:#222;font-size:24px;padding-right:150px">' + esc(p.title) + '</h4>' +
         '<div class="post-meta note">' + esc(p.author_name || '') + ' &nbsp;|&nbsp; ' + fmt(p.created_at, true) + ' &nbsp;|&nbsp; 조회 ' + (p.views + 1) + '</div></div>' +
         '<div class="post-body">' + content + '</div>' + attachHtml(p.attachments) +
         '<div class="board-bottom" style="justify-content:space-between"><a href="' + listUrl(p.board) + '" class="btn line">목록</a>' +
-        ((mine || DB.isAdmin()) ? '<span><a href="' + writeUrl(p.board, p.id) + '" class="btn">수정</a> <a href="#" id="delBtn" class="btn" style="background:#c33">삭제</a></span>' : '') + '</div>';
+        (canEdit ? '<span><a href="' + writeUrl(p.board, p.id) + '" class="btn">수정</a> <a href="#" class="btn del-btn" style="background:#c33">삭제</a></span>' : '') + '</div>';
       loadFullText(p);
       if (!(p.attachments && p.attachments.legacy_id && p.attachments.legacy_id.indexOf('audit-') === 0)) { var pb = box.querySelector('.post-body'); if (pb) renderKeywords(pb, pb); }
-      var del = document.getElementById('delBtn');
-      if (del) del.addEventListener('click', function (e) {
+      box.querySelectorAll('.del-btn').forEach(function (del) { del.addEventListener('click', function (e) {
         e.preventDefault();
         if (!confirm('이 게시글을 삭제할까요?')) return;
         DB.client.from('posts').delete().eq('id', p.id).then(function (r2) {
           if (r2.error) return alert('삭제 실패: ' + r2.error.message);
           location.href = listUrl(p.board);
         });
-      });
+      }); });
     });
   }
 
