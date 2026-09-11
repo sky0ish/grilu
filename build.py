@@ -26,7 +26,7 @@ MENUS = [
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
         ("council", "노사협의회"), ("agreement", "단체협약"), ("rules", "규약·규정"), ("law", "노동관계법령"),
-        ("delegate", "대의원 회의자료"), ("documents", "기타참고자료"),
+        ("director", "노동이사 활동보고"), ("delegate", "대의원 회의자료"), ("documents", "기타참고자료"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
         ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"), ("wish", "노조에 바란다"),
@@ -418,6 +418,16 @@ def regulations_pages():
         write(f"gri/regulations/part{part['no']}.html", simple_page(f'{part["part"]} — 경기연구원 제규정', body, wide=True, root="../../", visual="제규정"))
     return len(data)
 
+def p_director(root):
+    intro = """
+<div class="info-cards" style="margin-bottom:24px">
+  <div class="item"><div class="ico">&#128100;</div><b>노동이사제</b><p>노동자 대표가 이사회에 참여해 기관 운영의 투명성과 책임성을 높이는 제도입니다.</p></div>
+  <div class="item"><div class="ico">&#128203;</div><b>활동보고</b><p>이사회 참석 내용, 안건 검토 의견, 조합원 의견 전달 결과를 정기적으로 공개합니다.</p></div>
+  <div class="item"><div class="ico">&#128172;</div><b>의견 제안</b><p>이사회에서 다뤄 주길 바라는 사항은 소통상담 또는 노조에 바란다 게시판으로 보내 주세요.</p></div>
+</div>
+<p>노동이사의 이사회 활동과 결과를 조합원께 보고하는 게시판입니다.</p>"""
+    return board(root, "노동이사 활동보고", None, intro, code="director")
+
 def p_staff(root):
     intro = '<p>노동조합 운영진(집행부·대의원)이 운영 사항을 공유하는 게시판입니다. 승인된 조합원만 열람할 수 있으며 글쓰기는 관리자(운영진)만 가능합니다.</p>'
     return board(root, "운영진 게시판", None, intro, code="staff")
@@ -581,7 +591,7 @@ PAGES = {
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("gri", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
-    ("community", "staff"): p_staff, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
+    ("community", "staff"): p_staff, ("archive", "director"): p_director, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
 }
 
 # ------------------------------------------------------------------ 메인 페이지
