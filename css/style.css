@@ -7,9 +7,9 @@
   --gri-blue:#004098;     /* 경기연구원 CI 블루 */
   --gri-orange:#f39800;   /* 경기연구원 CI 오렌지 */
   --accent:#3a7bd5;
-  --sky:#4f9fd8;          /* 배경 이미지 지평선 하늘색 (메뉴바) */
-  --sky-light:#6db9ea;
-  --sky-dark:#3a8ac4;
+  --sky:#4279af;          /* 배경 사진(images/hero-bg.jpg) 하늘색 (메뉴바) */
+  --sky-light:#5b8fc0;
+  --sky-dark:#2f6398;
   --text:#333;
   --muted:#777;
   --line:#e3e6ee;
@@ -58,12 +58,12 @@ button{font-family:inherit;cursor:pointer}
 .menu-toggle{display:none;border:0;background:none;font-size:26px;color:var(--primary)}
 
 /* ---------- GNB ---------- */
-.gnb{background:linear-gradient(180deg,var(--sky-light),var(--sky));position:relative;z-index:50;box-shadow:0 2px 10px rgba(58,138,196,.25)}
+.gnb{background:linear-gradient(180deg,var(--sky-light),var(--sky));position:relative;z-index:50;box-shadow:0 2px 10px rgba(47,99,152,.3)}
 .gnb > .wrap > ul{display:flex}
 .gnb > .wrap > ul > li{flex:1;position:relative;text-align:center}
 .gnb > .wrap > ul > li > a{display:block;color:#fff;font-size:18px;font-weight:700;height:58px;line-height:58px;transition:background .2s;text-shadow:0 1px 2px rgba(0,0,0,.15)}
 .gnb > .wrap > ul > li:hover > a,.gnb > .wrap > ul > li.on > a{background:rgba(255,255,255,.22)}
-.gnb .sub{display:none;position:absolute;left:0;right:0;top:58px;background:rgba(79,159,216,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:3px solid rgba(255,255,255,.7);box-shadow:0 10px 30px rgba(20,60,110,.25);padding:10px 0;border-radius:0 0 10px 10px}
+.gnb .sub{display:none;position:absolute;left:0;right:0;top:58px;background:rgba(66,121,175,.9);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:3px solid rgba(255,255,255,.7);box-shadow:0 10px 30px rgba(20,60,110,.25);padding:10px 0;border-radius:0 0 10px 10px}
 .gnb > .wrap > ul > li:hover .sub{display:block}
 .gnb .sub a{display:block;padding:10px 12px;font-size:14.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.15)}
 .gnb .sub a:hover{background:rgba(255,255,255,.25);font-weight:700}
@@ -80,8 +80,9 @@ button{font-family:inherit;cursor:pointer}
 @media (max-width:640px){.searchband label{display:none}.searchband form{padding-left:16px}}
 
 /* ---------- Hero ---------- */
-.hero{position:relative;height:520px;color:#fff;overflow:hidden;
-  background:url(../images/hero-bg.jpg) right center/cover no-repeat,url(../images/hero-bg.svg) center/cover no-repeat}
+.hero{position:relative;height:680px;color:#fff;overflow:hidden;
+  background:url(../images/hero-bg.jpg) center 58%/cover no-repeat,url(../images/hero-bg.svg) center/cover no-repeat}
+@media (max-width:900px){.hero{height:520px;background-position:center 30%}}
 .hero::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,30,80,0) 35%,rgba(10,30,80,.35) 100%),linear-gradient(90deg,rgba(10,30,80,.4),rgba(10,30,80,.15) 45%,rgba(10,30,80,0) 65%)}
 .hero .wrap{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:56px}
 .hero .eyebrow{font-size:14px;letter-spacing:4px;text-transform:uppercase;opacity:.9;margin-bottom:14px}
@@ -214,7 +215,7 @@ button{font-family:inherit;cursor:pointer}
 
 /* ---------- Sub page ---------- */
 .sub-visual{height:220px;position:relative;color:#fff;display:flex;align-items:center;
-  background:url(../images/hero-bg.jpg) center 30%/cover no-repeat,url(../images/hero-bg.svg) center 30%/cover no-repeat}
+  background:url(../images/hero-bg.jpg) center 22%/cover no-repeat,url(../images/hero-bg.svg) center 30%/cover no-repeat}
 .sub-visual::before{content:"";position:absolute;inset:0;background:rgba(15,35,90,.45)}
 .sub-visual .wrap{position:relative}
 .sub-visual h2{font-size:36px;font-weight:800}
