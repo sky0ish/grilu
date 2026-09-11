@@ -209,8 +209,16 @@ def main():
       d = json.loads(z.read("posts.json").decode("utf-8"))
       posts = json.loads(d["posts"]) if isinstance(d["posts"], str) else d["posts"]
       for p in posts:
-          if p["board"] not in BOARD_MAP: continue
-          code, sub = BOARD_MAP[p["board"]]
+          if p.get("cat"):
+              code, sub = p["cat"], {"budget": "예산결산서", "rules": "노사협의회 운영규약", "news": "단체교섭", "council": "공지(노사협의회)", "guide": p.get("boardName", "가이드라인")}.get(p["cat"], p["cat"])
+          elif p["board"] in BOARD_MAP:
+              code, sub = BOARD_MAP[p["board"]]
+          else:
+              continue
+          # 제목 기준 재분류: 운영규약 → 규약·규정, 단체교섭·단체협약 → 노조소식
+          if code == "council":
+              if re.search(r"운영규약|노사협의회\s*규약", p["title"]): code, sub = "rules", "노사협의회 운영규약"
+              elif re.search(r"단체교섭|단체협약|임금협약|임단협|교섭", p["title"]): code, sub = "news", "단체교섭"
           raw = z.read("raw/" + p["id"] + ".html").decode("utf-8", "replace")
           body_html = clean_body(raw)
           body_text = clean_text(html.unescape(re.sub(r"<[^>]+>", " ", body_html)))
