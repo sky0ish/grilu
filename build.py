@@ -18,15 +18,14 @@ GW_REG_URL = "https://gw.gri.re.kr/servlet/HIServlet?SLET=bbs.BBS.java&boardID=0
 MENUS = [
     ("about", "조합소개", "함께 만드는 건강한 연구원", [
         ("greeting", "인사말"), ("officers", "집행부 소개"), ("history", "연혁"),
-        ("declaration", "선언·강령"), ("rules", "규약·규정"), ("organization", "조직도"),
+        ("declaration", "선언·강령"), ("rules", "규약·규정"),
         ("welfare", "조합원 복지"), ("join", "조합가입 안내"), ("location", "오시는 길"),
     ]),
     ("news", "소식마당", "노동조합의 소식과 알림을 전합니다", [
         ("notice", "공지사항"), ("news", "노조소식"), ("statement", "성명서·보도자료"),
-        ("regulation", "규정 및 지침"), ("council", "노사협의회"),
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
-        ("regulation", "규정 및 지침"), ("agreement", "단체협약"), ("law", "노동관계법령"),
+        ("agreement", "단체협약"), ("law", "노동관계법령"),
         ("documents", "문서자료"), ("photo", "사진자료"), ("video", "동영상"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
@@ -34,7 +33,7 @@ MENUS = [
         ("calendar", "일정 달력"),
     ]),
     ("gri", "GRI", "경기연구원 관련 공개 자료", [
-        ("audit", "행정사무감사"),
+        ("audit", "행정사무감사"), ("regulation", "규정 및 지침"), ("council", "노사협의회"),
     ]),
 ]
 
@@ -216,7 +215,8 @@ def p_officers(root):
 <h4>제○기 집행부 (임기 2026. 1. 1. ~ 2027. 12. 31.)</h4>
 <div class="officers">{cards}</div>
 <p class="note" style="margin-top:14px">※ 직책·성함·소속은 예시입니다. 사진은 <code>images/officers/</code> 폴더에 넣고 교체할 수 있습니다.</p>
-"""
+<h4 style="margin-top:40px">조직도</h4>
+""" + p_organization(root)
 
 def p_history(root):
     items = [("2026", [("01월", "제○기 집행부 출범"), ("03월", "2026년 정기 대의원대회")]),
@@ -484,7 +484,7 @@ PAGES = {
     ("news", "regulation"): p_regulation, ("news", "council"): p_council,
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("community", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
-    ("about", "join"): p_join, ("archive", "regulation"): p_regulation,
+    ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("gri", "council"): p_council,
     ("community", "staff"): p_staff, ("gri", "audit"): p_audit,
 }
 
@@ -525,7 +525,7 @@ def index():
       <div class="eyebrow">Together We Grow</div>
       <h2>함께 지키는 권리,<br><em>함께 만드는 변화</em></h2>
       <p>규정과 지침, 노사협의회 결과를 투명하게 공개하고 조합원의 목소리를 정책에 반영합니다.</p>
-      <div class="cta"><a href="news/regulation.html" class="primary">규정 및 지침</a><a href="news/council.html" class="ghost">노사협의회</a></div>
+      <div class="cta"><a href="gri/regulation.html" class="primary">규정 및 지침</a><a href="gri/council.html" class="ghost">노사협의회</a></div>
     </div></div>
     <div class="slide"><div class="wrap">
       <div class="eyebrow">Your Voice Matters</div>
@@ -551,8 +551,8 @@ def index():
 <div class="wrap">
   <nav class="quick" aria-label="바로가기"><ul>
     <li><a href="news/notice.html"><span class="ico">&#128226;</span>공지사항</a></li>
-    <li><a href="news/regulation.html"><span class="ico">&#128218;</span>규정 및 지침</a></li>
-    <li><a href="news/council.html"><span class="ico">&#129309;</span>노사협의회</a></li>
+    <li><a href="gri/regulation.html"><span class="ico">&#128218;</span>규정 및 지침</a></li>
+    <li><a href="gri/council.html"><span class="ico">&#129309;</span>노사협의회</a></li>
     <li><a href="community/calendar.html"><span class="ico">&#128197;</span>일정 달력</a></li>
     <li><a href="community/counsel.html"><span class="ico">&#128172;</span>소통상담</a></li>
     <li><a href="about/join.html"><span class="ico">&#9997;</span>조합가입</a></li>
@@ -570,14 +570,14 @@ def index():
         <div class="tab-panel"><ul class="list" data-latest="statement" data-limit="6">{li(stmt, code="statement")}</ul><div style="text-align:right;margin-top:8px"><a href="news/statement.html" class="more">더보기</a></div></div>
       </div>
       <div class="card">
-        <h4>규정 및 지침 <a href="news/regulation.html" class="more">더보기</a></h4>
+        <h4>규정 및 지침 <a href="gri/regulation.html" class="more">더보기</a></h4>
         <ul class="list compact" data-latest="regulation" data-limit="5" data-badge="규정|reg">{li(regs, code="regulation", badge=("규정", "reg"))}</ul>
         <div class="link-cards">
           <a href="{GW_REG_URL}" target="_blank" rel="noopener" class="c1"><span class="ico">&#128194;</span><span>그룹웨어 규정 및 지침<span>원문 보기 (내부망 로그인)</span></span></a>
         </div>
       </div>
       <div class="card">
-        <h4>노사협의회 <a href="news/council.html" class="more">더보기</a></h4>
+        <h4>노사협의회 <a href="gri/council.html" class="more">더보기</a></h4>
         <ul class="list compact" data-latest="council" data-limit="5" data-badge="협의회|council">{li(council, code="council", badge=("협의회", "council"))}</ul>
         <div class="link-cards">
           <a href="community/counsel.html" class="c2"><span class="ico">&#128172;</span><span>소통상담하기<span>비밀 보장 · 3일 이내 회신</span></span></a>

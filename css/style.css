@@ -350,3 +350,15 @@ button{font-family:inherit;cursor:pointer}
 .tbl .btn.danger{background:#c33}
 .st-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700}
 .st-badge.wait{background:#fde8e8;color:#c33}.st-badge.ok{background:#e3f5ec;color:#1f7a54}.st-badge.admin{background:#fff1dc;color:#b86400}
+
+/* ---------- 키워드 통계 ---------- */
+.kw-stats{background:#f4f7fc;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:0 0 18px}
+.kw-stats .kw-title{font-weight:700;color:var(--primary);margin-bottom:8px;font-size:15px}
+.kw-stats .kw-title .note{font-weight:400;font-size:12.5px}
+.kw-stats a.kw{display:inline-block;margin:3px 6px 3px 0;padding:4px 11px;border-radius:20px;background:#fff;border:1px solid #cdd8ea;color:#223;font-size:14px;transition:.15s}
+.kw-stats a.kw b{color:var(--primary);margin-left:2px}
+.kw-stats a.kw .pos{color:#888;font-size:12px}
+.kw-stats a.kw:hover,.kw-stats a.kw.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.kw-stats a.kw.on b,.kw-stats a.kw:hover b,.kw-stats a.kw.on .pos{color:#ffd27a}
+mark.kw-hit{background:#fff2a8;padding:0 2px;border-radius:2px}
+mark.kw-hit.cur{background:#f39800;color:#fff}

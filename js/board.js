@@ -20,10 +20,10 @@
     return m[code] || code;
   }
   function boardSection(code) {
-    if (['notice', 'news', 'statement', 'regulation', 'council', 'newsletter'].indexOf(code) >= 0) return 'news';
+    if (['notice', 'news', 'statement', 'newsletter'].indexOf(code) >= 0) return 'news';
     if (['documents', 'agreement', 'law', 'photo', 'video'].indexOf(code) >= 0) return 'archive';
     if (code === 'rules' || code === 'welfare' || code === 'join') return 'about';
-    if (code === 'audit') return 'gri';
+    if (['audit', 'regulation', 'council'].indexOf(code) >= 0) return 'gri';
     return 'community';
   }
   function listUrl(code) { return DB.root + boardSection(code) + '/' + code + '.html'; }
@@ -152,6 +152,7 @@
         '<div class="board-bottom" style="justify-content:space-between"><a href="' + listUrl(p.board) + '" class="btn line">목록</a>' +
         ((mine || DB.isAdmin()) ? '<span><a href="' + writeUrl(p.board, p.id) + '" class="btn">수정</a> <a href="#" id="delBtn" class="btn" style="background:#c33">삭제</a></span>' : '') + '</div>';
       loadFullText(p);
+      if (!(p.attachments && p.attachments.legacy_id && p.attachments.legacy_id.indexOf('audit-') === 0)) { var pb = box.querySelector('.post-body'); if (pb) renderKeywords(pb, pb); }
       var del = document.getElementById('delBtn');
       if (del) del.addEventListener('click', function (e) {
         e.preventDefault();
@@ -184,7 +185,84 @@
       var wrap = document.createElement('div'); wrap.className = 'minutes'; wrap.style.cssText = 'line-height:1.85;font-size:15px';
       wrap.innerHTML = full.innerHTML;
       body.appendChild(wrap);
+      renderKeywords(body, wrap);
     }).catch(function () { note.textContent = '전문을 불러오지 못했습니다. 위 링크에서 확인하세요.'; });
+  }
+
+
+  // ---------- 키워드 통계 (본문에서 많이 나온 낱말) ----------
+  var KW_STOP = ('그리고 그런데 그래서 그러면 그러니까 그렇게 이렇게 그렇고 저희 우리 위원 위원장 위원님 의원 의원님 여러분 지금 이제 정도 부분 경우 사항 내용 관련 대해 대해서 대한 통해 통해서 위해 위해서 위한 때문 말씀 질의 답변 감사 ' +
+    '그것 이것 저것 여기 거기 어디 무엇 이거 그거 저거 하나 아니 아니라 그냥 같은 같이 있는 없는 하는 되는 해서 하고 해야 그런 이런 저런 어떤 모든 다른 여러 계속 다시 먼저 다음 이상 이하 현재 오늘 어제 내년 올해 작년 지난 ' +
+    '물론 사실 실제 실제로 결국 특히 바로 아직 이미 항상 많이 조금 굉장히 상당히 매우 정말 진짜 제가 저는 저도 제일 전체 자체 시간 문제 방법 생각 얘기 이야기 소관 발언 개의 산회 정회 속개 회의 회의록 의석 정돈 의사 일정 진행 ' +
+    '원장 원장님 실장 실장님 국장 국장님 과장 과장님 담당 담당관 답변자 관계 공무원 직원 기관 사무처 행정사무감사 행정사무 경기도의회 의회 도의회 기획재정위원회 기획위원회 기획조정실 경기도 경기연구원 경기개발연구원 연구원 피감사기관 피감기관 ' +
+    '수고 부탁 질문 확인 정리 설명 검토 보고 자료 부분 관련해서 그래도 그러나 하지만 그러면서 이러한 그러한 어떻게 어떤 얼마나 무슨 이번 저번 한번 두번 사실상 대부분 일부 각각 모두 전부 거의 정도로 하나도 그다음 마지막 처음 ' +
+    '있지 거는 혹시 가지 년도 기조실장 기조실장님 이게 그게 저게 이건 그건 저건 있고 없고 것들 부분들 주시기 주세요 가지고 걸로 근데 되어 관련된 경기 하면 하니까 있어서 있어 없어 뭐가 되게 하게 있게 그리 이렇게 저렇게 그러고 그럼 이제는 그때 이때 저기 여기서 거기서 하나씩 하는데 되는데 있는데 없는데 그거는 이거는 우리가 저희가 제가요 그러니 그러다 한테 대한 대비 ' +
+    '알겠습니다 감사합니다 됩니다 합니다 입니다 있습니다 없습니다 했습니다 됐습니다 겠습니다 습니다 그렇습니다 맞습니다 아닙니다 드립니다 바랍니다 하겠습니다 되겠습니다').split(' ');
+  var KW_SUFFIX = ['에서는', '으로는', '에게는', '으로써', '으로서', '이라고', '에서', '에게', '한테', '께서', '부터', '까지', '으로', '라고', '이며', '이고', '에는', '에도', '과는', '와는', '이나', '이란', '만큼', '보다', '처럼', '은', '는', '이', '가', '을', '를', '의', '에', '로', '과', '와', '도', '만', '들', '께', '요'];
+  function kwNormalize(w) {
+    for (var i = 0; i < KW_SUFFIX.length; i++) {
+      var sf = KW_SUFFIX[i];
+      if (w.length - sf.length >= 2 && w.slice(-sf.length) === sf) { w = w.slice(0, -sf.length); break; }
+    }
+    if (w.length > 2 && w.slice(-1) === '님') w = w.slice(0, -1);
+    {
+    }
+    return w;
+  }
+  function kwStats(box, text, limit) {
+    var stop = {}; KW_STOP.forEach(function (w) { stop[w] = 1; });
+    // 발언자 표기(<b>○ 위원장 홍길동</b>)의 이름은 제외
+    box.querySelectorAll('b').forEach(function (b) { (b.textContent.match(/[가-힣]{2,20}/g) || []).forEach(function (n) { stop[n] = 1; }); });
+    var cnt = {};
+    (text.match(/[가-힣]{2,}|[A-Za-z][A-Za-z0-9]{2,}/g) || []).forEach(function (w) {
+      w = kwNormalize(w);
+      if (w.length < 2 || stop[w] || /(다|요|까|죠|네|는데|니까|지만|으며|하면|해서|되어|하고|되고|있고|없고|하는|되는|있는|없는|면서|해도|해야|하지|되지|이죠|거든|이든)$/.test(w) || /^[0-9]/.test(w)) return;
+      cnt[w] = (cnt[w] || 0) + 1;
+    });
+    return Object.keys(cnt).map(function (k) { return [k, cnt[k]]; }).filter(function (x) { return x[1] >= 2; })
+      .map(function (x) { return [x[0], text.split(x[0]).length - 1]; })   // 본문 실제 등장 횟수
+      .sort(function (a, b) { return b[1] - a[1] || a[0].localeCompare(b[0]); }).slice(0, limit || 20);
+  }
+  function renderKeywords(body, textWrap) {
+    var text = textWrap.textContent;
+    if (text.length < 1500) return;
+    var top = kwStats(textWrap, text, 20);
+    if (!top.length) return;
+    var old = document.querySelector('.kw-stats'); if (old) old.remove();
+    var bar = document.createElement('div'); bar.className = 'kw-stats';
+    bar.innerHTML = '<div class="kw-title">&#128202; 많이 나온 키워드 <span class="note">(누르면 본문에서 해당 위치로 이동)</span></div>' +
+      top.map(function (x) { return '<a href="#" class="kw" data-kw="' + esc(x[0]) + '">' + esc(x[0]) + ' <b>' + x[1] + '</b></a>'; }).join('');
+    body.parentNode.insertBefore(bar, body);
+    var orig = textWrap.innerHTML, cur = { kw: '', i: -1 };
+    bar.addEventListener('click', function (e) {
+      var a = e.target.closest('a.kw'); if (!a) return;
+      e.preventDefault();
+      var kw = a.getAttribute('data-kw');
+      if (cur.kw !== kw) {
+        textWrap.innerHTML = orig; highlight(textWrap, kw); cur.kw = kw; cur.i = -1;
+        bar.querySelectorAll('a.kw').forEach(function (x) { x.classList.toggle('on', x === a); });
+      }
+      var marks = textWrap.querySelectorAll('mark.kw-hit');
+      if (!marks.length) return;
+      cur.i = (cur.i + 1) % marks.length;
+      marks.forEach(function (m, k) { m.classList.toggle('cur', k === cur.i); });
+      var top = marks[cur.i].getBoundingClientRect().top + window.pageYOffset - 140;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+      var c = a.querySelector('.pos') || a.appendChild(Object.assign(document.createElement('span'), { className: 'pos' }));
+      c.textContent = ' ' + (cur.i + 1) + '/' + marks.length;
+    });
+  }
+  function highlight(root, kw) {
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), nodes = [], n;
+    while ((n = walker.nextNode())) if (n.nodeValue.indexOf(kw) >= 0) nodes.push(n);
+    nodes.forEach(function (t) {
+      var parts = t.nodeValue.split(kw), frag = document.createDocumentFragment();
+      parts.forEach(function (ptxt, i) {
+        if (i) { var m = document.createElement('mark'); m.className = 'kw-hit'; m.textContent = kw; frag.appendChild(m); }
+        if (ptxt) frag.appendChild(document.createTextNode(ptxt));
+      });
+      t.parentNode.replaceChild(frag, t);
+    });
   }
 
   // ---------- 쓰기 / 수정 ----------
@@ -361,6 +439,9 @@
   }
   // 예시 글은 DB 연결과 무관하게 즉시 표시
   var demoShown = renderDemo();
+
+  var staticMinutes = document.querySelector('.post-body.minutes');
+  if (staticMinutes) renderKeywords(staticMinutes, staticMinutes);
 
   document.addEventListener('db:ready', function () {
     if (demoShown) return;
