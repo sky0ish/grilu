@@ -2,7 +2,7 @@
 """
 메인 배경 이미지 생성기 (저작권 없는 자체 제작 벡터)
 - 왼쪽: 문구가 들어갈 여백, 오른쪽: 언덕 위에 서 있는 사람들의 실루엣, 뒤로는 역광의 하늘
-- 실행: python images/gen_bg.py  → images/hero-bg.svg
+- 실행: python images/gen_bg_scene.py  → images/hero-bg.svg
 """
 import math, random
 random.seed(7)
@@ -50,38 +50,4 @@ def person(x, base, h, pose, flip=False):
         parts.append(f'<path d="M{x-hw},{ay} L{x-hw-6*s},{ay+30*s} L{x+hw+6*s},{ay+30*s} L{x+hw},{ay} L{x+hw-8*s},{ay+10*s} L{x-hw+8*s},{ay+10*s} Z"/>')
     return "".join(parts)
 
-s = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid slice">',
-'<defs>',
-' <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d2a66"/><stop offset="0.45" stop-color="#1e4f9e"/><stop offset="0.8" stop-color="#5fa8dc"/><stop offset="1" stop-color="#bfe3f7"/></linearGradient>',
-' <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/><stop offset="0.35" stop-color="#ffe9b0" stop-opacity="0.55"/><stop offset="1" stop-color="#ffe9b0" stop-opacity="0"/></radialGradient>',
-' <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1a3a"/><stop offset="1" stop-color="#050d1f"/></linearGradient>',
-' <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.35"/></linearGradient>',
-'</defs>',
-f'<rect width="{W}" height="{H}" fill="url(#sky)"/>',
-# 역광 태양
-f'<ellipse cx="1330" cy="{GROUND-20}" rx="520" ry="300" fill="url(#sun)"/>',
-f'<rect x="0" y="{GROUND-160}" width="{W}" height="160" fill="url(#haze)"/>',
-]
-# 얇은 구름 띠
-for i, (cx, cy, rx) in enumerate([(300, 120, 260), (900, 70, 200), (1500, 150, 300), (600, 220, 180)]):
-    s.append(f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{9+i*2}" fill="#ffffff" opacity="0.07"/>')
-# 언덕 지면
-s.append(f'<path d="M0,{GROUND+40} Q480,{GROUND+18} 960,{GROUND+4} T{W},{GROUND-6} L{W},{H} L0,{H} Z" fill="url(#ground)"/>')
-# 사람들 (오른쪽 55% 영역)
-s.append('<g fill="#08122b">')
-xs = [1010, 1075, 1150, 1235, 1300, 1380, 1445, 1520, 1600, 1665, 1745, 1830]
-poses = ["stand", "skirt", "wide", "stand", "skirt", "stand", "wide", "stand", "skirt", "stand", "wide", "stand"]
-for i, x in enumerate(xs):
-    x += random.randint(-8, 8)
-    base = GROUND + 4 - (x - 960) * 0.011
-    h = random.randint(178, 215)
-    s.append(person(x, base, h, poses[i], flip=(i % 3 == 2)))
-s.append('</g>')
-# 지면 잔풀 느낌
-for i in range(0, W, 9):
-    hh = random.randint(2, 9)
-    yy = GROUND + 40 - (i / W) * 46
-    s.append(f'<rect x="{i}" y="{yy-hh}" width="2" height="{hh}" fill="#08122b"/>')
-s.append('</svg>')
-open(__file__.replace("gen_bg.py", "hero-bg.svg"), "w", encoding="utf-8").write("\n".join(s))
-print("ok")
+# (아래 장면 구성은 gen_bg_scene.py 로 이동했습니다. 이 파일은 person() 실루엣 함수만 제공합니다)

@@ -15,14 +15,15 @@
 
   function boardName(code) {
     var m = { notice: '공지사항', news: '노조소식', statement: '성명서·보도자료', regulation: '규정 및 지침', council: '노사협의회',
-      newsletter: '노보(소식지)', documents: '문서자료', agreement: '단체협약', law: '노동관계법령', rules: '규약·규정',
-      board: '조합원 게시판', photo: '사진자료', video: '동영상' };
+      documents: '문서자료', agreement: '단체협약', law: '노동관계법령', rules: '규약·규정',
+      board: '자유게시판', staff: '운영진 게시판', audit: '행정사무감사', photo: '사진자료', video: '동영상' };
     return m[code] || code;
   }
   function boardSection(code) {
     if (['notice', 'news', 'statement', 'regulation', 'council', 'newsletter'].indexOf(code) >= 0) return 'news';
     if (['documents', 'agreement', 'law', 'photo', 'video'].indexOf(code) >= 0) return 'archive';
-    if (code === 'rules') return 'about';
+    if (code === 'rules' || code === 'welfare' || code === 'join') return 'about';
+    if (code === 'audit') return 'gri';
     return 'community';
   }
   function listUrl(code) { return DB.root + boardSection(code) + '/' + code + '.html'; }
@@ -252,6 +253,37 @@
     });
   }
 
+
+  // ---------- 통합 검색 ----------
+  function renderSearch() {
+    var tbl = document.getElementById('searchTable');
+    if (!tbl) return;
+    var tbody = tbl.querySelector('tbody');
+    var q = (DB.qs('q') || '').trim();
+    var kw = document.querySelector('.board-top .kw'); if (kw) kw.textContent = q ? '"' + q + '"' : '';
+    var inp = document.querySelector('.board-top form input'); if (inp) inp.value = q;
+    document.title = (q ? q + ' - ' : '') + '자료검색 | ' + (cfg.SITE_NAME || '');
+    if (!q) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#888">검색어를 입력해 주세요.</td></tr>'; return; }
+    var like = '%' + q.replace(/[%_]/g, '') + '%';
+    DB.client.from('posts').select('id,board,title,author_name,created_at,attachments')
+      .or('title.ilike.' + like + ',content.ilike.' + like)
+      .order('created_at', { ascending: false }).limit(200)
+      .then(function (r) {
+        if (r.error) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#c33">검색에 실패했습니다: ' + esc(r.error.message) + '</td></tr>'; return; }
+        var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = r.data.length;
+        if (!r.data.length) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#888">"' + esc(q) + '" 에 해당하는 자료가 없습니다.</td></tr>'; return; }
+        var BS = String.fromCharCode(92);
+        var safe = q.split('').map(function (c) { return /[A-Za-z0-9가-힣 ]/.test(c) ? c : BS + c; }).join('');
+        var re = new RegExp('(' + safe + ')', 'ig');
+        tbody.innerHTML = r.data.map(function (p) {
+          var title = esc(p.title).replace(re, '<mark style="background:#fff2a8;padding:0 2px">$1</mark>');
+          return '<tr><td class="num"><a href="' + listUrl(p.board) + '" style="color:var(--primary);font-weight:600">' + esc(boardName(p.board)) + '</a></td>' +
+            '<td class="tit"><a href="' + viewUrl(p.id) + '">' + title + '</a>' + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</td>' +
+            '<td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td></tr>';
+        }).join('');
+      });
+  }
+
   // ---------- 고충상담 접수 ----------
   function bindCounsel() {
     var form = document.getElementById('counselForm');
@@ -277,7 +309,7 @@
     document.title = t + ' | ' + name + ' | ' + (cfg.SITE_NAME || '');
     var pt = document.querySelector('.page-title'); if (pt) pt.textContent = name;
     var bodies = {
-      notice: ['조합원 여러분께 안내드립니다.', '자세한 내용은 노동조합 사무실(내선 3114) 또는 고충상담 게시판을 통해 문의해 주시기 바랍니다.', '조합원 여러분의 많은 관심과 참여를 부탁드립니다.'],
+      notice: ['조합원 여러분께 안내드립니다.', '자세한 내용은 노동조합 사무실(내선 3114) 또는 소통상담을 통해 문의해 주시기 바랍니다.', '조합원 여러분의 많은 관심과 참여를 부탁드립니다.'],
       news: ['경기연구원 노동조합의 활동 소식을 전해드립니다.', '노동조합은 조합원의 권익 향상과 건강한 노사관계를 위해 계속 노력하겠습니다.'],
       statement: ['경기연구원 노동조합은 다음과 같이 입장을 밝힙니다.', '노동조합은 연구원 구성원의 노동권과 연구 자율성을 지키기 위해 모든 노력을 다할 것입니다.', '2026년 ○월 ○일 경기연구원 노동조합'],
       regulation: ['경기연구원 규정 및 지침 원문입니다.', '개정 사항은 시행일 이후 적용되며, 원문 파일은 첨부파일에서 내려받을 수 있습니다.'],
@@ -299,6 +331,6 @@
   document.addEventListener('db:ready', function () {
     if (demoShown) return;
     if (!DB.ready) return;   // 정적 모드
-    renderList(); renderView(); renderWrite(); renderLatest(); renderGallery(); bindCounsel();
+    renderList(); renderView(); renderWrite(); renderLatest(); renderGallery(); renderSearch(); bindCounsel();
   });
 })();

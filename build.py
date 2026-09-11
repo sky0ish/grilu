@@ -10,6 +10,8 @@ import os, html
 SITE = "경기연구원 노동조합"
 SITE_EN = "Gyeonggi Research Institute Labor Union"
 DOMAIN = "grilu.kr"
+import time
+VER = time.strftime("%Y%m%d%H%M")   # CSS/JS 캐시 갱신용
 GW_REG_URL = "https://gw.gri.re.kr/servlet/HIServlet?SLET=bbs.BBS.java&boardID=0000002t9"
 
 # ------------------------------------------------------------------ 메뉴
@@ -17,19 +19,22 @@ MENUS = [
     ("about", "조합소개", "함께 만드는 건강한 연구원", [
         ("greeting", "인사말"), ("officers", "집행부 소개"), ("history", "연혁"),
         ("declaration", "선언·강령"), ("rules", "규약·규정"), ("organization", "조직도"),
-        ("location", "오시는 길"),
+        ("welfare", "조합원 복지"), ("join", "조합가입 안내"), ("location", "오시는 길"),
     ]),
     ("news", "소식마당", "노동조합의 소식과 알림을 전합니다", [
         ("notice", "공지사항"), ("news", "노조소식"), ("statement", "성명서·보도자료"),
-        ("regulation", "규정 및 지침"), ("council", "노사협의회"), ("newsletter", "노보(소식지)"),
+        ("regulation", "규정 및 지침"), ("council", "노사협의회"),
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
-        ("photo", "사진자료"), ("video", "동영상"), ("agreement", "단체협약"),
-        ("law", "노동관계법령"), ("documents", "문서자료"),
+        ("regulation", "규정 및 지침"), ("agreement", "단체협약"), ("law", "노동관계법령"),
+        ("documents", "문서자료"), ("photo", "사진자료"), ("video", "동영상"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
-        ("calendar", "일정 달력"), ("board", "조합원 게시판"), ("counsel", "고충상담"),
-        ("welfare", "조합원 복지"), ("join", "조합가입 안내"),
+        ("staff", "운영진 게시판"), ("board", "자유게시판"), ("counsel", "소통상담"),
+        ("calendar", "일정 달력"),
+    ]),
+    ("gri", "GRI", "경기연구원 관련 공개 자료", [
+        ("audit", "행정사무감사"),
     ]),
 ]
 
@@ -49,7 +54,7 @@ def head(root, title):
 <link rel="icon" href="{root}images/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{root}css/style.css">
+<link rel="stylesheet" href="{root}css/style.css?v={VER}">
 </head>
 <body data-root="{root}">
 """
@@ -82,8 +87,8 @@ def header(root, cur_sec=None):
         <span class="name"><strong>노동조합</strong><span>{SITE_EN}</span></span>
       </a>
     </h1>
-    <form class="search" action="{root}news/notice.html" onsubmit="return false">
-      <input type="search" placeholder="검색어를 입력하세요" aria-label="검색어">
+    <form class="search" action="{root}board/search.html" method="get">
+      <input type="search" name="q" placeholder="검색어를 입력하세요" aria-label="검색어">
       <button type="submit" aria-label="검색">&#128269;</button>
     </form>
     <button class="menu-toggle" aria-label="메뉴 열기">&#9776;</button>
@@ -125,13 +130,13 @@ def footer(root):
 </footer>
 <button class="totop" aria-label="맨 위로">&#8679;</button>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="{root}js/config.js"></script>
-<script src="{root}js/events.js"></script>
-<script src="{root}js/db.js"></script>
-<script src="{root}js/main.js"></script>
-<script src="{root}js/board.js"></script>
-<script src="{root}js/auth.js"></script>
-<script src="{root}js/admin.js"></script>
+<script src="{root}js/config.js?v={VER}"></script>
+<script src="{root}js/events.js?v={VER}"></script>
+<script src="{root}js/db.js?v={VER}"></script>
+<script src="{root}js/main.js?v={VER}"></script>
+<script src="{root}js/board.js?v={VER}"></script>
+<script src="{root}js/auth.js?v={VER}"></script>
+<script src="{root}js/admin.js?v={VER}"></script>
 </body>
 </html>
 """
@@ -195,7 +200,7 @@ def p_greeting(root):
 <p>경기연구원 노동조합은 연구원 구성원의 노동 권익을 지키고, 자율적이고 창의적인 연구 환경을 만들기 위해 활동하고 있습니다.
 연구자와 직원 모두가 존중받는 일터, 공정하고 투명한 인사와 보수 제도, 그리고 일과 삶의 균형을 위해 노사가 함께 고민하고 실천하겠습니다.</p>
 <p>노동조합은 조합원 한 분 한 분의 목소리에서 출발합니다. 현장의 어려움과 제안을 언제든 노동조합에 전해 주십시오.
-고충상담, 조합원 게시판, 그리고 정기적인 간담회를 통해 여러분과 소통하고, 노사협의회와 교섭을 통해 실질적인 변화를 만들어가겠습니다.</p>
+소통상담, 자유게시판, 그리고 정기적인 간담회를 통해 여러분과 소통하고, 노사협의회와 교섭을 통해 실질적인 변화를 만들어가겠습니다.</p>
 <p>경기도민을 위한 정책연구라는 우리의 사명을 자랑스럽게 수행할 수 있도록, 노동조합이 든든한 울타리가 되겠습니다. 감사합니다.</p>
 <div class="box" style="text-align:right"><b>경기연구원 노동조합 위원장</b> &nbsp; <span style="font-size:20px;font-weight:800">○ ○ ○</span></div>
 <p class="note">※ 인사말 내용과 위원장 성함은 예시입니다. 실제 내용으로 교체해 주세요.</p>
@@ -327,6 +332,29 @@ def p_council(root):
     btn = f'<a href="{GW_REG_URL}" target="_blank" rel="noopener" class="btn line">그룹웨어 원문 보기</a>'
     return board(root, "노사협의회", rows, intro, btn, code="council")
 
+
+def p_staff(root):
+    intro = '<p>노동조합 운영진(집행부·대의원)이 운영 사항을 공유하는 게시판입니다. 승인된 조합원만 열람할 수 있으며 글쓰기는 관리자(운영진)만 가능합니다.</p>'
+    return board(root, "운영진 게시판", None, intro, code="staff")
+
+def p_audit(root):
+    import json as _json
+    try:
+        data = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "audit.json"), encoding="utf-8"))
+    except Exception:
+        data = []
+    rows = [(len(data) - i, f'{r["title"]} — {r["committee"]}', "경기도의회", r["date"], "-") for i, r in enumerate(data)]
+    intro = """
+<div class="info-cards" style="margin-bottom:24px">
+  <div class="item"><div class="ico">&#127963;</div><b>행정사무감사</b><p>경기도의회가 매년 11월 도 산하기관을 대상으로 실시하는 감사. 경기연구원은 주로 <b>기획재정위원회</b> 소관입니다.</p></div>
+  <div class="item"><div class="ico">&#128196;</div><b>회의록 원문</b><p>경기도의회 회의록 시스템(kms.ggc.go.kr)에서 경기연구원(구 경기개발연구원) 관련 회의록만 모았습니다.</p></div>
+  <div class="item"><div class="ico">&#128269;</div><b>활용</b><p>의원 질의와 연구원 답변을 통해 기관 운영 현안과 지적사항을 확인할 수 있습니다.</p></div>
+</div>
+<p>제4대(1995년)부터 제11대(2025년)까지 행정사무감사 회의록 중 경기연구원이 피감기관으로 포함된 회의입니다. 제목을 누르면 본문 전문과 원문 링크를 볼 수 있습니다.</p>
+"""
+    btn = '<a href="https://kms.ggc.go.kr/svc/cms/mnts/MntsTreeAuditList.do" target="_blank" rel="noopener" class="btn line">경기도의회 회의록 원문</a>'
+    return board(root, "행정사무감사", rows, intro, btn, code="audit")
+
 def p_photo(root):
     caps = ["2026년 정기 대의원대회", "신규 조합원 환영 간담회", "노사협의회 상견례", "조합원 한마음 체육행사",
             "2025년 임금협약 조인식", "조합 창립기념 행사", "노동조합 간부 교육", "경기도 공공기관 노조 연대회의", "명절 맞이 조합원 나눔행사"]
@@ -360,8 +388,8 @@ def p_counsel(root):
   <div class="item"><div class="ico">&#9201;</div><b>신속 처리</b><p>접수 후 3일 이내 담당자가 연락드리고 처리 경과를 안내합니다.</p></div>
   <div class="item"><div class="ico">&#129309;</div><b>함께 해결</b><p>필요 시 고충처리위원회·노사협의회 안건으로 상정하여 해결합니다.</p></div>
 </div>
-<h4>고충상담 신청</h4>
-<form id="counselForm" onsubmit="alert('Supabase 연결 후 접수됩니다.');return false">
+<h4>소통상담 신청</h4>
+<form id="counselForm">
 <table class="tbl form-tbl">
   <tr><th>성명</th><td><input type="text" name="name" placeholder="비공개 상담을 원하시면 '익명'으로 적어주세요"></td></tr>
   <tr><th>연락처 / 이메일</th><td><input type="text" name="contact" placeholder="회신 받을 연락처"></td></tr>
@@ -402,7 +430,7 @@ def p_join(root):
 </div>
 <h4>조합비</h4>
 <p>통상임금의 ○% (월 ○○,○○○원 상한) — 규약 제○조에 따릅니다.</p>
-<div class="board-bottom" style="justify-content:flex-start"><a href="#" class="btn">가입신청서 내려받기</a><a href="counsel.html" class="btn line">가입 문의</a></div>
+<div class="board-bottom" style="justify-content:flex-start"><a href="#" class="btn">가입신청서 내려받기</a><a href="../community/counsel.html" class="btn line">가입 문의</a></div>
 <p class="note">※ 가입 대상·조합비는 예시입니다. 규약에 맞게 수정해 주세요.</p>
 """
 
@@ -428,8 +456,9 @@ PAGES = {
     ("about", "location"): p_location,
     ("news", "regulation"): p_regulation, ("news", "council"): p_council,
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
-    ("community", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("community", "welfare"): p_welfare,
-    ("community", "join"): p_join,
+    ("community", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
+    ("about", "join"): p_join, ("archive", "regulation"): p_regulation,
+    ("community", "staff"): p_staff, ("gri", "audit"): p_audit,
 }
 
 # ------------------------------------------------------------------ 메인 페이지
@@ -463,7 +492,7 @@ def index():
       <div class="eyebrow">{SITE_EN}</div>
       <h2>연구자와 함께!<br><em>조합원과 함께!</em></h2>
       <p>경기연구원 노동조합은 구성원 모두가 존중받는 일터, 자율적이고 공정한 연구 환경을 만들어 갑니다.</p>
-      <div class="cta"><a href="community/join.html" class="primary">조합가입 안내</a><a href="about/greeting.html" class="ghost">노동조합 소개</a></div>
+      <div class="cta"><a href="about/join.html" class="primary">조합가입 안내</a><a href="about/greeting.html" class="ghost">노동조합 소개</a></div>
     </div></div>
     <div class="slide"><div class="wrap">
       <div class="eyebrow">Together We Grow</div>
@@ -474,11 +503,22 @@ def index():
     <div class="slide"><div class="wrap">
       <div class="eyebrow">Your Voice Matters</div>
       <h2>당신의 고충,<br><em>노동조합이 듣겠습니다</em></h2>
-      <p>고충상담은 비밀이 보장되며, 접수 후 3일 이내 담당자가 연락드립니다.</p>
-      <div class="cta"><a href="community/counsel.html" class="primary">고충상담 신청</a><a href="community/board.html" class="ghost">조합원 게시판</a></div>
+      <p>소통상담은 비밀이 보장되며, 접수 후 3일 이내 담당자가 연락드립니다.</p>
+      <div class="cta"><a href="community/counsel.html" class="primary">소통상담 신청</a><a href="community/board.html" class="ghost">자유게시판</a></div>
     </div></div>
   </div>
   <div class="dots"></div>
+</section>
+
+<section class="searchband">
+  <div class="wrap">
+    <form action="board/search.html" method="get" role="search">
+      <label for="siteSearch">자료검색</label>
+      <input type="search" id="siteSearch" name="q" placeholder="찾으시는 자료의 키워드를 입력하세요 (예: 단체협약, 회의록, 인사규정)" autocomplete="off">
+      <button type="submit">&#128269; 검색</button>
+    </form>
+    <p class="hint">공지사항 · 규정 및 지침 · 노사협의회 · 단체협약 · 문서자료 등 모든 게시판을 한 번에 검색합니다.</p>
+  </div>
 </section>
 
 <div class="wrap">
@@ -487,8 +527,8 @@ def index():
     <li><a href="news/regulation.html"><span class="ico">&#128218;</span>규정 및 지침</a></li>
     <li><a href="news/council.html"><span class="ico">&#129309;</span>노사협의회</a></li>
     <li><a href="community/calendar.html"><span class="ico">&#128197;</span>일정 달력</a></li>
-    <li><a href="community/counsel.html"><span class="ico">&#128172;</span>고충상담</a></li>
-    <li><a href="community/join.html"><span class="ico">&#9997;</span>조합가입</a></li>
+    <li><a href="community/counsel.html"><span class="ico">&#128172;</span>소통상담</a></li>
+    <li><a href="about/join.html"><span class="ico">&#9997;</span>조합가입</a></li>
   </ul></nav>
 </div>
 
@@ -513,7 +553,7 @@ def index():
         <h4>노사협의회 <a href="news/council.html" class="more">더보기</a></h4>
         <ul class="list compact" data-latest="council" data-limit="5" data-badge="협의회|council">{li(council, code="council", badge=("협의회", "council"))}</ul>
         <div class="link-cards">
-          <a href="community/counsel.html" class="c2"><span class="ico">&#128172;</span><span>고충상담하기<span>비밀 보장 · 3일 이내 회신</span></span></a>
+          <a href="community/counsel.html" class="c2"><span class="ico">&#128172;</span><span>소통상담하기<span>비밀 보장 · 3일 이내 회신</span></span></a>
           <a href="community/board.html" class="c3"><span class="ico">&#128221;</span><span>조합원 게시판<span>자유롭게 의견을 나눠주세요</span></span></a>
         </div>
       </div>
@@ -599,6 +639,17 @@ MYPAGE = """
 </table><div class="board-bottom" style="justify-content:center"><button type="submit" class="btn">저장</button></div></form>
 """
 VIEW = """<article id="postView"><p style="color:#888">게시글을 불러오는 중...</p></article>"""
+SEARCH = """
+<div class="board-top">
+  <span>검색어 <b class="kw" style="color:var(--primary)"></b> &nbsp; 결과 <b class="total">0</b>건</span>
+  <form action="search.html" method="get"><input type="search" name="q" placeholder="검색어"><button type="submit">검색</button></form>
+</div>
+<table class="tbl" id="searchTable">
+  <thead><tr><th class="num" style="width:130px">게시판</th><th>제목</th><th class="writer">작성자</th><th class="date">작성일</th></tr></thead>
+  <tbody><tr><td colspan="4" style="padding:40px;color:#888">검색 중...</td></tr></tbody>
+</table>
+<p class="note" style="margin-top:14px">※ 제목과 본문에 검색어가 포함된 게시글을 모든 게시판에서 찾습니다. (조합원 전용 게시판은 로그인 후 검색 결과에 포함됩니다)</p>
+"""
 WRITE = """
 <form id="postForm" enctype="multipart/form-data">
 <input type="hidden" name="board">
@@ -691,6 +742,7 @@ def main():
     write("member/mypage.html", simple_page("내 정보", MYPAGE))
     write("board/view.html", simple_page("게시글", VIEW, wide=True))
     write("board/write.html", simple_page("글쓰기", WRITE, wide=True))
+    write("board/search.html", simple_page("자료검색", SEARCH, wide=True))
     write("admin/index.html", simple_page("관리자", ADMIN, wide=True))
     write("admin/members.html", simple_page("회원관리", ADMIN_MEMBERS, wide=True))
     write("admin/events.html", simple_page("일정관리", ADMIN_EVENTS, wide=True))
