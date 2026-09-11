@@ -92,7 +92,8 @@ Supabase 는 프로젝트 `ryyvwpkhlqbcsjbttxca` 에 연결되어 있고(`js/con
 관리자 지정은 `make_admin.sql` 을 SQL Editor 에서 실행합니다.
 
 ### 배경 이미지
-`5.images/배경1.webp` → `images/hero-bg.jpg` 로 변환해 사용 중. 교체하려면 새 사진을 `images/hero-bg.jpg` 로 저장하면 됩니다.
+`5.images/배경1.webp` 를 `images/make_hero.py` 로 합성(오른쪽 사진 + 왼쪽 하늘 여백)해 `images/hero-bg.jpg` 로 사용 중.
+사진을 바꾸려면 `5.images/배경1.webp` 를 교체하고 `python images/make_hero.py` 실행.
 (사진이 없으면 `images/gen_bg_scene.py` 로 만든 `hero-bg.svg` 가 대신 표시됩니다.)
 
 ### 행정사무감사 자료 갱신

@@ -80,11 +80,11 @@ button{font-family:inherit;cursor:pointer}
 @media (max-width:640px){.searchband label{display:none}.searchband form{padding-left:16px}}
 
 /* ---------- Hero ---------- */
-.hero{position:relative;height:680px;color:#fff;overflow:hidden;
-  background:url(../images/hero-bg.jpg) center 58%/cover no-repeat,url(../images/hero-bg.svg) center/cover no-repeat}
-@media (max-width:900px){.hero{height:520px;background-position:center 30%}}
-.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,30,80,0) 35%,rgba(10,30,80,.35) 100%),linear-gradient(90deg,rgba(10,30,80,.4),rgba(10,30,80,.15) 45%,rgba(10,30,80,0) 65%)}
-.hero .wrap{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:56px}
+.hero{position:relative;height:560px;color:#fff;overflow:hidden;
+  background:url(../images/hero-bg.jpg) right bottom/cover no-repeat,url(../images/hero-bg.svg) center/cover no-repeat}
+@media (max-width:900px){.hero{height:480px;background-position:75% bottom}}
+.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,30,80,.28),rgba(10,30,80,.1) 40%,rgba(10,30,80,0) 55%)}
+.hero .wrap{position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding-bottom:20px}
 .hero .eyebrow{font-size:14px;letter-spacing:4px;text-transform:uppercase;opacity:.9;margin-bottom:14px}
 .hero h2{font-size:44px;font-weight:800;line-height:1.25;text-shadow:0 2px 14px rgba(0,0,0,.45)}
 .hero h2 em{font-style:normal;color:#ffd27a}
@@ -215,7 +215,7 @@ button{font-family:inherit;cursor:pointer}
 
 /* ---------- Sub page ---------- */
 .sub-visual{height:220px;position:relative;color:#fff;display:flex;align-items:center;
-  background:url(../images/hero-bg.jpg) center 22%/cover no-repeat,url(../images/hero-bg.svg) center 30%/cover no-repeat}
+  background:url(../images/hero-bg.jpg) right 40%/cover no-repeat,url(../images/hero-bg.svg) center 30%/cover no-repeat}
 .sub-visual::before{content:"";position:absolute;inset:0;background:rgba(15,35,90,.45)}
 .sub-visual .wrap{position:relative}
 .sub-visual h2{font-size:36px;font-weight:800}
