@@ -30,10 +30,9 @@ MENUS = [
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
         ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"),
-        ("calendar", "일정 달력"),
     ]),
     ("gri", "GRI", "경기연구원 관련 공개 자료", [
-        ("audit", "행정사무감사"), ("regulation", "규정 및 지침"),
+        ("audit", "행정사무감사"), ("regulation", "규정 및 지침"), ("calendar", "일정 달력"),
     ]),
 ]
 
@@ -504,7 +503,7 @@ PAGES = {
     ("about", "location"): p_location,
     ("news", "regulation"): p_regulation, ("news", "council"): p_council,
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
-    ("community", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
+    ("gri", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
     ("community", "staff"): p_staff, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
 }
@@ -574,7 +573,7 @@ def index():
     <li><a href="news/notice.html"><span class="ico">&#128226;</span>공지사항</a></li>
     <li><a href="gri/regulation.html"><span class="ico">&#128218;</span>규정 및 지침</a></li>
     <li><a href="archive/council.html"><span class="ico">&#129309;</span>노사협의회</a></li>
-    <li><a href="community/calendar.html"><span class="ico">&#128197;</span>일정 달력</a></li>
+    <li><a href="gri/calendar.html"><span class="ico">&#128197;</span>일정 달력</a></li>
     <li><a href="community/counsel.html"><span class="ico">&#128172;</span>소통상담</a></li>
     <li><a href="about/join.html"><span class="ico">&#9997;</span>조합가입</a></li>
   </ul></nav>
@@ -611,7 +610,7 @@ def index():
 
 <section class="section soft">
   <div class="wrap">
-    <div class="sec-head"><h3><small>Calendar</small>노동조합 일정</h3><a href="community/calendar.html" class="more">전체 일정</a></div>
+    <div class="sec-head"><h3><small>Calendar</small>노동조합 일정</h3><a href="gri/calendar.html" class="more">전체 일정</a></div>
     <div class="cal-grid">
       <div class="card calendar">
         <div class="cal-head">
