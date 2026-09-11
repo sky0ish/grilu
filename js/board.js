@@ -15,14 +15,14 @@
 
   function boardName(code) {
     var m = { notice: '공지사항', news: '노조소식', statement: '성명서·보도자료', othernews: '기타 노조 소식', regulation: '규정 및 지침', council: '노사협의회',
-      documents: '문서자료', agreement: '단체협약', law: '노동관계법령', rules: '규약·규정',
-      board: '조합원 자유게시판', staff: '운영진 게시판', audit: '행정사무감사', photo: '사진자료', video: '동영상' };
+      documents: '기타참고자료', agreement: '단체협약', law: '노동관계법령', rules: '규약·규정',
+      board: '조합원 자유게시판', staff: '운영진 게시판', delegate: '대의원 회의자료', wish: '노조에 바란다', audit: '행정사무감사', photo: '사진자료', video: '동영상' };
     return m[code] || code;
   }
   function boardSection(code) {
     if (['notice', 'news', 'statement', 'newsletter', 'othernews'].indexOf(code) >= 0) return 'news';
-    if (['documents', 'agreement', 'law', 'photo', 'video', 'council'].indexOf(code) >= 0) return 'archive';
-    if (code === 'rules' || code === 'welfare' || code === 'join') return 'about';
+    if (['documents', 'agreement', 'law', 'photo', 'video', 'council', 'delegate', 'rules'].indexOf(code) >= 0) return 'archive';
+    if (code === 'welfare' || code === 'join') return 'about';
     if (['audit', 'regulation'].indexOf(code) >= 0) return 'gri';
     return 'community';
   }
@@ -44,11 +44,72 @@
     }).join('') + '</ul></div>';
   }
 
+
+  // ---------- 기타 노조 소식 (빅카인즈 자동 수집, data/othernews.json) ----------
+  var newsCache = null;
+  function loadNews() {
+    if (newsCache) return Promise.resolve(newsCache);
+    return fetch(DB.root + 'data/othernews.json?v=' + Math.floor(Date.now() / 3600000)).then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (j) { newsCache = j || []; return newsCache; }).catch(function () { return []; });
+  }
+  function newsUrl(id) { return DB.root + 'board/view.html?news=' + id; }
+  function renderNewsView() {
+    var box = document.getElementById('postView');
+    var id = DB.qs('news');
+    if (!box || !id) return false;
+    var t = document.querySelector('.page-title'); if (t) t.textContent = '기타 노조 소식';
+    loadNews().then(function (list) {
+      var n = list.filter(function (x) { return x.id === id; })[0];
+      if (!n) { box.innerHTML = '<p style="color:#c33">뉴스를 찾을 수 없습니다.</p>'; return; }
+      document.title = n.title + ' | 기타 노조 소식 | ' + (cfg.SITE_NAME || '');
+      var i = list.indexOf(n), prev = list[i + 1], next = list[i - 1];
+      box.innerHTML = '<div class="post-head" style="border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px">' +
+        '<span class="badge" style="font-size:12px;color:#fff;background:var(--primary);padding:2px 8px;border-radius:4px">' + esc(n.provider) + '</span>' +
+        '<h4 style="border:0;padding:0;margin:8px 0 6px;color:#222;font-size:24px">' + esc(n.title) + '</h4>' +
+        '<div class="note">' + esc(n.provider) + (n.byline ? ' · ' + esc(n.byline) : '') + ' &nbsp;|&nbsp; ' + esc(n.date) + ' &nbsp;|&nbsp; 검색 키워드: ' + esc((n.keywords || []).join(', ')) + '</div></div>' +
+        '<div class="post-body" style="line-height:1.9;font-size:16px"><p>' + esc(n.summary) + (n.summary && n.summary.length >= 290 ? '…' : '') + '</p>' +
+        '<p style="margin-top:20px"><a href="' + esc(n.url) + '" target="_blank" rel="noopener" class="btn">기사 원문 보기 (' + esc(n.provider) + ')</a></p>' +
+        '<p class="note" style="margin-top:20px">※ 저작권 보호를 위해 기사 앞부분만 표시합니다. 전문은 언론사 원문 링크에서 확인하세요. 출처: 빅카인즈(한국언론진흥재단)</p></div>' +
+        '<table class="tbl" style="margin-top:24px">' +
+        (next ? '<tr><th style="text-align:left;width:90px">다음글</th><td style="text-align:left"><a href="' + newsUrl(next.id) + '">' + esc(next.title) + '</a></td></tr>' : '') +
+        (prev ? '<tr><th style="text-align:left">이전글</th><td style="text-align:left"><a href="' + newsUrl(prev.id) + '">' + esc(prev.title) + '</a></td></tr>' : '') + '</table>' +
+        '<div class="board-bottom" style="justify-content:space-between"><a href="' + listUrl('othernews') + '" class="btn line">목록</a></div>';
+    });
+    return true;
+  }
+  // 기타 노조 소식 목록: 자동 수집 뉴스 + 관리자 작성글 병합
+  function renderNewsList(tbl, code) {
+    var tbody = tbl.querySelector('tbody');
+    var page = parseInt(DB.qs('page') || '1', 10), q = (DB.qs('q') || '').trim();
+    var dbq = DB.client.from('posts').select('id,title,author_name,created_at,views,is_notice,attachments').eq('board', code).order('created_at', { ascending: false }).limit(300);
+    Promise.all([loadNews(), dbq]).then(function (res) {
+      var items = (res[0] || []).map(function (n) { return { link: newsUrl(n.id), html: esc(n.title) + ' <span class="note">[' + esc(n.provider) + ']</span>', raw: n.title + ' ' + n.summary, writer: '뉴스', date: n.date, hit: '-', notice: false }; });
+      ((res[1] && res[1].data) || []).forEach(function (p) {
+        items.push({ link: viewUrl(p.id), html: esc(p.title) + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : ''), raw: p.title, writer: p.author_name || '', date: fmt(p.created_at), hit: p.views, notice: p.is_notice });
+      });
+      if (q) items = items.filter(function (x) { return x.raw.indexOf(q) >= 0; });
+      items.sort(function (a, b) { return (b.notice - a.notice) || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0); });
+      var total = items.length, from = (page - 1) * PAGE;
+      var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = total;
+      var slice = items.slice(from, from + PAGE);
+      tbody.innerHTML = slice.length ? slice.map(function (x, i) {
+        return '<tr><td class="num">' + (x.notice ? '<span class="badge" style="background:var(--primary);color:#fff;font-size:11px;padding:2px 6px;border-radius:3px">공지</span>' : (total - from - i)) + '</td>' +
+          '<td class="tit"><a href="' + x.link + '">' + x.html + '</a></td><td class="writer">' + esc(x.writer) + '</td><td class="date">' + esc(x.date) + '</td><td class="hit">' + x.hit + '</td></tr>';
+      }).join('') : '<tr><td colspan="5" style="padding:40px;color:#888">해당하는 글이 없습니다.</td></tr>';
+      renderPaging(total, page, q);
+      renderWriteBtn(code);
+      var note = document.querySelector('.static-note'); if (note) note.remove();
+    });
+    var form = document.querySelector('.board-top form');
+    if (form) { var inp = form.querySelector('input'); if (inp) inp.value = q; form.onsubmit = function () { location.href = listUrl(code) + '?q=' + encodeURIComponent(inp.value.trim()); return false; }; }
+  }
+
   // ---------- 목록 ----------
   function renderList() {
     var tbl = document.querySelector('.tbl[data-board]');
     if (!tbl) return;
     var code = tbl.getAttribute('data-board');
+    if (code === 'othernews') return renderNewsList(tbl, code);
     var tbody = tbl.querySelector('tbody');
     var page = parseInt(DB.qs('page') || '1', 10);
     var q = DB.qs('q') || '';
@@ -135,6 +196,7 @@
   function renderView() {
     var box = document.getElementById('postView');
     if (!box) return;
+    if (renderNewsView()) return;
     var id = DB.qs('id');
     if (!id) { box.innerHTML = '<p>잘못된 접근입니다.</p>'; return; }
     DB.client.from('posts').select('*').eq('id', id).maybeSingle().then(function (r) {
@@ -377,13 +439,16 @@
     document.title = (q ? q + ' - ' : '') + '자료검색 | ' + (cfg.SITE_NAME || '');
     if (!q) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#888">검색어를 입력해 주세요.</td></tr>'; return; }
     var like = '%' + q.replace(/[%_]/g, '') + '%';
-    DB.client.from('posts').select('id,board,title,author_name,created_at,attachments')
+    Promise.all([DB.client.from('posts').select('id,board,title,author_name,created_at,attachments')
       .or('title.ilike.' + like + ',content.ilike.' + like)
-      .order('created_at', { ascending: false }).limit(200)
-      .then(function (r) {
+      .order('created_at', { ascending: false }).limit(200), loadNews()])
+      .then(function (res) {
+        var r = res[0];
         if (r.error) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#c33">검색에 실패했습니다: ' + esc(r.error.message) + '</td></tr>'; return; }
-        var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = r.data.length;
-        if (!r.data.length) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#888">"' + esc(q) + '" 에 해당하는 자료가 없습니다.</td></tr>'; return; }
+        var ql = q.toLowerCase();
+        var newsHits = (res[1] || []).filter(function (n) { return (n.title + ' ' + n.summary).toLowerCase().indexOf(ql) >= 0; });
+        var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = r.data.length + newsHits.length;
+        if (!r.data.length && !newsHits.length) { tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;color:#888">"' + esc(q) + '" 에 해당하는 자료가 없습니다.</td></tr>'; return; }
         var BS = String.fromCharCode(92);
         var safe = q.split('').map(function (c) { return /[A-Za-z0-9가-힣 ]/.test(c) ? c : BS + c; }).join('');
         var re = new RegExp('(' + safe + ')', 'ig');
@@ -392,6 +457,10 @@
           return '<tr><td class="num"><a href="' + listUrl(p.board) + '" style="color:var(--primary);font-weight:600">' + esc(boardName(p.board)) + '</a></td>' +
             '<td class="tit"><a href="' + viewUrl(p.id) + '">' + title + '</a>' + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</td>' +
             '<td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td></tr>';
+        }).join('') + newsHits.map(function (n) {
+          return '<tr><td class="num"><a href="' + listUrl('othernews') + '" style="color:var(--primary);font-weight:600">기타 노조 소식</a></td>' +
+            '<td class="tit"><a href="' + newsUrl(n.id) + '">' + esc(n.title).replace(re, '<mark style="background:#fff2a8;padding:0 2px">$1</mark>') + ' <span class="note">[' + esc(n.provider) + ']</span></a></td>' +
+            '<td class="writer">뉴스</td><td class="date">' + esc(n.date) + '</td></tr>';
         }).join('');
       });
   }

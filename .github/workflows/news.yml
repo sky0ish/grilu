@@ -1,0 +1,30 @@
+name: 기타 노조 소식 자동 수집 (빅카인즈)
+
+on:
+  schedule:
+    - cron: "0 21 * * *"     # 매일 06:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: 빅카인즈 검색 결과 수집
+        run: python tools/fetch_news.py --days 14
+      - name: 페이지 재생성
+        run: python build.py
+      - name: 변경사항 커밋
+        run: |
+          git config user.name "grilu-bot"
+          git config user.email "union@grilu.kr"
+          git add -A
+          git diff --cached --quiet && echo "변경 없음" || git commit -m "뉴스 자동 수집 $(date -u +'%Y-%m-%d')"
+          git push

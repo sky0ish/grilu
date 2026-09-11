@@ -18,18 +18,18 @@ GW_REG_URL = "https://gw.gri.re.kr/servlet/HIServlet?SLET=bbs.BBS.java&boardID=0
 MENUS = [
     ("about", "조합소개", "함께 만드는 건강한 연구원", [
         ("greeting", "인사말"), ("officers", "집행부 소개"), ("history", "연혁"),
-        ("declaration", "선언·강령"), ("rules", "규약·규정"),
+        ("declaration", "선언·강령"),
         ("welfare", "조합원 복지"), ("join", "조합가입 안내"), ("location", "오시는 길"),
     ]),
     ("news", "소식마당", "노동조합의 소식과 알림을 전합니다", [
         ("notice", "공지사항"), ("news", "노조소식"), ("statement", "성명서·보도자료"), ("othernews", "기타 노조 소식"),
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
-        ("agreement", "단체협약"), ("council", "노사협의회"), ("law", "노동관계법령"),
-        ("documents", "문서자료"),
+        ("council", "노사협의회"), ("agreement", "단체협약"), ("rules", "규약·규정"), ("law", "노동관계법령"),
+        ("delegate", "대의원 회의자료"), ("documents", "기타참고자료"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
-        ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"),
+        ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"), ("wish", "노조에 바란다"),
     ]),
     ("gri", "GRI", "경기연구원 관련 공개 자료", [
         ("audit", "행정사무감사"), ("regulation", "규정 및 지침"), ("calendar", "일정 달력"),
@@ -334,13 +334,24 @@ def p_council(root):
 
 
 def p_othernews(root):
-    rows = [(5, "경기도 공공기관 노동조합 연대회의 정기총회 결과", "노동조합", "2026-08-20", 64),
-            (4, "전국공공연구노동조합 2026 하반기 정책토론회 안내", "노동조합", "2026-08-05", 51),
-            (3, "경기도청 공무원노조, 유연근무 확대 합의", "노동조합", "2026-07-15", 93),
-            (2, "타 출연기관 임금협약 체결 현황 (2026 상반기)", "노동조합", "2026-06-28", 120),
-            (1, "공공기관 노동조합 연대 워크숍 참가 보고", "노동조합", "2026-05-30", 77)]
-    intro = '<p>다른 노동조합·연대단체의 소식과 공공기관 노동계 동향을 전합니다.</p>'
+    """빅카인즈 자동 수집 뉴스 (data/othernews.json, tools/fetch_news.py 가 매일 갱신)"""
+    import json as _json
+    try:
+        news = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "othernews.json"), encoding="utf-8"))
+    except Exception:
+        news = []
+    rows = [(len(news) - i, f'{n["title"]} <span class="note">[{n["provider"]}]</span>', "뉴스", n["date"], "-", f'{root}board/view.html?news={n["id"]}') for i, n in enumerate(news)]
+    intro = ('<p>다른 노동조합·연대단체의 소식과 공공기관 노동계 동향입니다. 뉴스는 빅카인즈(한국언론진흥재단)에서 '
+             '<b>"경기도 산하기관 노조"</b>, <b>"경기도 공공기관 노조"</b>, <b>"경기연구원 노조"</b> 키워드로 매일 자동 수집되며, 제목을 누르면 요약과 원문 링크가 표시됩니다.</p>')
     return board(root, "기타 노조 소식", rows, intro, code="othernews")
+
+def p_delegate(root):
+    intro = '<p>대의원대회·대의원회의 안건과 회의자료를 공유합니다. 승인된 조합원만 열람할 수 있습니다.</p>'
+    return board(root, "대의원 회의자료", None, intro, code="delegate")
+
+def p_wish(root):
+    intro = '<p>노동조합에 바라는 점, 제안, 건의를 자유롭게 남겨 주세요. 승인된 조합원이면 누구나 글을 쓸 수 있고, 운영진이 확인 후 답변합니다.</p>'
+    return board(root, "노조에 바란다", None, intro, code="wish")
 
 def p_staff(root):
     intro = '<p>노동조합 운영진(집행부·대의원)이 운영 사항을 공유하는 게시판입니다. 승인된 조합원만 열람할 수 있으며 글쓰기는 관리자(운영진)만 가능합니다.</p>'
@@ -499,13 +510,13 @@ def p_law(root):
 
 PAGES = {
     ("about", "greeting"): p_greeting, ("about", "officers"): p_officers, ("about", "history"): p_history,
-    ("about", "declaration"): p_declaration, ("about", "rules"): p_rules, ("about", "organization"): p_organization,
+    ("about", "declaration"): p_declaration, ("archive", "rules"): p_rules, ("about", "organization"): p_organization,
     ("about", "location"): p_location,
     ("news", "regulation"): p_regulation, ("news", "council"): p_council,
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("gri", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
-    ("community", "staff"): p_staff, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
+    ("community", "staff"): p_staff, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
 }
 
 # ------------------------------------------------------------------ 메인 페이지

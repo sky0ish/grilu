@@ -8,3 +8,5 @@ delete from public.boards where code = 'newsletter';
 
 -- 2026-09-12 추가
 insert into public.boards (code, name, members_only, admin_only_write) values ('othernews', '기타 노조 소식', false, true) on conflict (code) do nothing;
+insert into public.boards (code, name, members_only, admin_only_write) values ('delegate', '대의원 회의자료', true, true), ('wish', '노조에 바란다', false, false) on conflict (code) do nothing;
+update public.boards set name = '기타참고자료' where code = 'documents';
