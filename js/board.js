@@ -465,6 +465,28 @@
       });
   }
 
+  // ---------- 조합원 현황 (개인정보 없는 집계, RPC member_stats) ----------
+  function renderMemberStats() {
+    var box = document.getElementById('memberStats');
+    if (!box) return;
+    DB.client.rpc('member_stats').then(function (r) {
+      if (r.error || !r.data) { box.querySelectorAll('[data-ms]').forEach(function (e) { e.textContent = '?'; }); return; }
+      var d = r.data;
+      var set = function (k, v) { var e = box.querySelector('[data-ms="' + k + '"]'); if (e) e.textContent = v; };
+      set('total', d.total + '명'); set('depts', (d.by_dept || []).length); set('recent', d.recent || 0);
+      var fill = function (id, rows) {
+        var tb = document.querySelector('#' + id + ' tbody');
+        if (!rows || !rows.length) { tb.innerHTML = '<tr><td colspan="3" style="padding:24px;color:#888">아직 등록된 조합원이 없습니다.</td></tr>'; return; }
+        tb.innerHTML = rows.map(function (x) {
+          var pct = d.total ? Math.round(x.n * 100 / d.total) : 0;
+          return '<tr><td style="text-align:left">' + esc(x.name || '(미입력)') + '</td><td class="num">' + x.n + '명</td>' +
+            '<td><div style="background:#eef2f8;border-radius:4px;height:14px;overflow:hidden"><div style="width:' + pct + '%;height:100%;background:var(--primary)"></div></div><span class="note">' + pct + '%</span></td></tr>';
+        }).join('');
+      };
+      fill('msPosition', d.by_position); fill('msDept', d.by_dept);
+    });
+  }
+
   // ---------- 고충상담 접수 ----------
   function bindCounsel() {
     var form = document.getElementById('counselForm');
@@ -515,6 +537,6 @@
   document.addEventListener('db:ready', function () {
     if (demoShown) return;
     if (!DB.ready) return;   // 정적 모드
-    renderList(); renderView(); renderWrite(); renderLatest(); renderGallery(); renderSearch(); bindCounsel();
+    renderList(); renderView(); renderWrite(); renderLatest(); renderGallery(); renderSearch(); renderMemberStats(); bindCounsel();
   });
 })();

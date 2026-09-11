@@ -18,7 +18,7 @@ GW_REG_URL = "https://gw.gri.re.kr/servlet/HIServlet?SLET=bbs.BBS.java&boardID=0
 MENUS = [
     ("about", "조합소개", "함께 만드는 건강한 연구원", [
         ("greeting", "인사말"), ("officers", "집행부 소개"), ("history", "연혁"),
-        ("declaration", "선언·강령"),
+        ("declaration", "선언·강령"), ("members", "조합원 현황"),
         ("welfare", "조합원 복지"), ("join", "조합가입 안내"), ("location", "오시는 길"),
     ]),
     ("news", "소식마당", "노동조합의 소식과 알림을 전합니다", [
@@ -353,6 +353,22 @@ def p_wish(root):
     intro = '<p>노동조합에 바라는 점, 제안, 건의를 자유롭게 남겨 주세요. 승인된 조합원이면 누구나 글을 쓸 수 있고, 운영진이 확인 후 답변합니다.</p>'
     return board(root, "노조에 바란다", None, intro, code="wish")
 
+def p_members(root):
+    return """
+<p>홈페이지 회원가입 후 승인된 조합원을 기준으로 집계합니다. 개인 정보 없이 인원수만 표시되며, 관리자가 회원을 승인·수정하면 자동으로 갱신됩니다.</p>
+<div class="info-cards" id="memberStats" style="margin:20px 0 28px">
+  <div class="item"><div class="ico">&#128101;</div><b>전체 조합원</b><p style="font-size:30px;font-weight:800;color:var(--primary);margin:0" data-ms="total">-</p></div>
+  <div class="item"><div class="ico">&#127970;</div><b>소속 부서</b><p style="font-size:30px;font-weight:800;color:var(--primary);margin:0"><span data-ms="depts">-</span><span style="font-size:15px;color:#666;font-weight:500"> 개 부서</span></p></div>
+  <div class="item"><div class="ico">&#128200;</div><b>이번 달 신규 가입</b><p style="font-size:30px;font-weight:800;color:var(--gri-orange);margin:0"><span data-ms="recent">-</span><span style="font-size:15px;color:#666;font-weight:500"> 명</span></p></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px" class="ms-grid">
+  <div><h4>직급별 현황</h4><table class="tbl" id="msPosition"><thead><tr><th>직급</th><th class="num" style="width:110px">인원</th><th style="width:40%">비율</th></tr></thead><tbody><tr><td colspan="3" style="padding:24px;color:#888">불러오는 중...</td></tr></tbody></table></div>
+  <div><h4>부서별 현황</h4><table class="tbl" id="msDept"><thead><tr><th>소속(부서)</th><th class="num" style="width:110px">인원</th><th style="width:40%">비율</th></tr></thead><tbody><tr><td colspan="3" style="padding:24px;color:#888">불러오는 중...</td></tr></tbody></table></div>
+</div>
+<style>@media (max-width:800px){.ms-grid{grid-template-columns:1fr!important}}</style>
+<p class="note" style="margin-top:20px">※ 조합비 납부 기준 조합원 수 등 공식 통계와 차이가 있을 수 있습니다. 홈페이지 미가입 조합원은 집계에 포함되지 않습니다.</p>
+"""
+
 def p_staff(root):
     intro = '<p>노동조합 운영진(집행부·대의원)이 운영 사항을 공유하는 게시판입니다. 승인된 조합원만 열람할 수 있으며 글쓰기는 관리자(운영진)만 가능합니다.</p>'
     return board(root, "운영진 게시판", None, intro, code="staff")
@@ -516,7 +532,7 @@ PAGES = {
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("gri", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
-    ("community", "staff"): p_staff, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
+    ("community", "staff"): p_staff, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
 }
 
 # ------------------------------------------------------------------ 메인 페이지
