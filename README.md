@@ -71,7 +71,24 @@ python -m http.server 8765
 권한 요약: 공지·규정·노사협의회 등 공식 게시판은 관리자만 글쓰기, 조합원 게시판은 승인된 조합원만 열람·글쓰기,
 고충상담은 누구나 접수 가능하고 관리자만 열람.
 
-## 배포
+## 배포 (현재 상태: 2026-09-12)
+
+- GitHub 저장소 **sky0ish/grilu** 의 `main` 브랜치가 GitHub Pages 로 자동 배포됩니다. (`git push` 하면 1~2분 뒤 반영)
+- Pages 의 Custom domain 은 `grilu.kr` 로 설정되어 있습니다. (저장소의 `CNAME` 파일)
+- 도메인은 가비아(gabia)에서 등록되어 있으므로, **가비아 > My가비아 > 도메인 관리 > DNS 설정** 에 아래 레코드를 추가해야 접속됩니다.
+
+| 타입 | 호스트 | 값 |
+|---|---|---|
+| A | @ | 185.199.108.153 |
+| A | @ | 185.199.109.153 |
+| A | @ | 185.199.110.153 |
+| A | @ | 185.199.111.153 |
+| CNAME | www | sky0ish.github.io |
+
+DNS 반영 후 GitHub 저장소 Settings > Pages 에서 **Enforce HTTPS** 를 켭니다. (인증서 발급까지 최대 1시간)
+
+Supabase 는 프로젝트 `ryyvwpkhlqbcsjbttxca` 에 연결되어 있고(`js/config.js`), `schema.sql` 과 `seed_council.sql` 은 이미 실행되었습니다.
+
 
 정적 파일이므로 아래 중 하나로 올리면 됩니다. (`grilu-site.zip` 은 업로드용으로 사이트 파일만 묶은 것)
 
