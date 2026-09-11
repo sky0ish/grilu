@@ -194,7 +194,8 @@ def clean_body(h):
         if depth == 0: body = h[j:j + m.start()]; break
     else:
         body = h[j:]
-    body = re.sub(r"<script.*?</script>", "", body, flags=re.S)
+    body = re.sub(r"<script.*?</script>", "", body, flags=re.S | re.I)
+    body = re.sub(r"<(?:link|meta|style)[^>]*>.*?(?:</style>)?", "", body, flags=re.S | re.I)
     body = re.sub(r'\s(?:style|class|onmouseover|onmouseout|width|height)="[^"]*"', "", body)
     body = re.sub(r"<img[^>]*>", "", body)
     body = re.sub(r"<a [^>]*JAVASCRIPT[^>]*>(.*?)</a>", r"\1", body, flags=re.S)

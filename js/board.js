@@ -130,6 +130,8 @@
       rows.forEach(function (tr) {
         var ok = !cur || ((map[tr.getAttribute('data-legacy')] || []).indexOf(cur) >= 0);
         tr.style.display = ok ? '' : 'none'; if (ok) shown++;
+        var a = tr.querySelector('.tit a');
+        if (a) { if (!a.getAttribute('data-href')) a.setAttribute('data-href', a.getAttribute('href')); var h = a.getAttribute('data-href'); a.setAttribute('href', cur ? h + (h.indexOf('?') >= 0 ? '&' : '?') + 'kw=' + encodeURIComponent(cur) : h); }
       });
       var cnt = document.querySelector('.board-top .total'); if (cnt && cur) cnt.textContent = shown + ' (키워드 "' + cur + '")';
       var pg = document.querySelector('.paging'); if (pg) pg.style.display = cur ? 'none' : '';
@@ -281,7 +283,8 @@
   function loadFullText(p) {
     var a = p.attachments || {};
     var legacy = a.legacy_id || '';
-    var url = a.page ? DB.root + a.page : (legacy.indexOf('audit-') === 0 ? DB.root + 'gri/audit/' + legacy.slice(6) + '.html' : '');
+    var page = (a.page || '').replace(/^https?:\/\/[^/]+\//, '');
+    var url = page ? DB.root + page : (legacy.indexOf('audit-') === 0 ? DB.root + 'gri/audit/' + legacy.slice(6) + '.html' : '');
     if (!url) return;
     var body = document.querySelector('#postView .post-body');
     if (!body) return;
@@ -302,7 +305,7 @@
       wrap.innerHTML = full.innerHTML;
       body.appendChild(wrap);
       renderKeywords(body, wrap, pre);
-    }).catch(function () { note.textContent = '전문을 불러오지 못했습니다. 위 링크에서 확인하세요.'; });
+    }).catch(function (e) { console.error('loadFullText', e); note.textContent = '전문을 불러오지 못했습니다. 위 링크에서 확인하세요.'; });
   }
 
 
@@ -358,6 +361,12 @@
       (neg.length ? '<div class="kw-row"><span class="kw-label neg">부정</span>' + neg.map(kwChip).join('') + '</div>' : '');
     body.parentNode.insertBefore(bar, body);
     var orig = textWrap.innerHTML, cur = { kw: '', i: -1 };
+    var want = DB.qs('kw');
+    if (want) setTimeout(function () {
+      var a = bar.querySelector('a.kw[data-kw="' + want.replace(/"/g, '') + '"]');
+      if (a) a.click();
+      else { textWrap.innerHTML = orig; highlight(textWrap, want); var m = textWrap.querySelector('mark.kw-hit'); if (m) { m.classList.add('cur'); window.scrollTo({ top: m.getBoundingClientRect().top + window.pageYOffset - 140 }); } }
+    }, 50);
     bar.addEventListener('click', function (e) {
       var a = e.target.closest('a.kw'); if (!a) return;
       e.preventDefault();
@@ -371,7 +380,7 @@
       cur.i = (cur.i + 1) % marks.length;
       marks.forEach(function (m, k) { m.classList.toggle('cur', k === cur.i); });
       var top = marks[cur.i].getBoundingClientRect().top + window.pageYOffset - 140;
-      window.scrollTo({ top: top, behavior: 'smooth' });
+      window.scrollTo({ top: top });
       var c = a.querySelector('.pos') || a.appendChild(Object.assign(document.createElement('span'), { className: 'pos' }));
       c.textContent = ' ' + (cur.i + 1) + '/' + marks.length;
     });
@@ -535,14 +544,15 @@
         var hl = function (t) { return esc(t).replace(re, '<mark style="background:#fff2a8;padding:0 2px">$1</mark>'); };
         tbody.innerHTML = idxHits.map(function (it) {
           var sn = snippet(it.x, q, 70); var inFile = !it.t.toLowerCase().includes(ql) && it.x.toLowerCase().indexOf(ql) >= 0;
+          var u = it.u.split('#'); var link = DB.root + u[0] + '?kw=' + encodeURIComponent(q) + (u[1] ? '#' + u[1] : '');
           return '<tr><td class="num"><span style="color:var(--primary);font-weight:600">' + esc(it.b) + '</span></td>' +
-            '<td class="tit"><a href="' + DB.root + it.u + '">' + hl(it.t) + '</a>' + (it.f && it.f.length ? ' <span title="첨부">&#128206;</span>' : '') +
+            '<td class="tit"><a href="' + link + '">' + hl(it.t) + '</a>' + (it.f && it.f.length ? ' <span title="첨부">&#128206;</span>' : '') +
             (sn ? '<div class="note" style="font-size:13px;margin-top:3px;white-space:normal;line-height:1.5">' + (inFile ? '<span style="color:#b02a2a">[본문·첨부 전문]</span> ' : '') + hl(sn) + '</div>' : '') + '</td>' +
             '<td class="writer">' + esc(it.a) + '</td><td class="date">' + esc(it.d) + '</td></tr>';
         }).join('') + r.data.map(function (p) {
           var title = esc(p.title).replace(re, '<mark style="background:#fff2a8;padding:0 2px">$1</mark>');
           return '<tr><td class="num"><a href="' + listUrl(p.board) + '" style="color:var(--primary);font-weight:600">' + esc(boardName(p.board)) + '</a></td>' +
-            '<td class="tit"><a href="' + viewUrl(p.id) + '">' + title + '</a>' + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</td>' +
+            '<td class="tit"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + title + '</a>' + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</td>' +
             '<td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td></tr>';
         }).join('') + newsHits.map(function (n) {
           return '<tr><td class="num"><a href="' + listUrl('othernews') + '" style="color:var(--primary);font-weight:600">기타 노조 소식</a></td>' +
@@ -620,6 +630,15 @@
 
   var staticMinutes = document.querySelector('.post-body.minutes:not(.rules-body)');
   if (staticMinutes) renderKeywords(staticMinutes, staticMinutes);
+  var rulesBody = document.querySelector('.post-body.rules-body');
+  if (rulesBody && DB.qs('kw')) {
+    highlight(rulesBody, DB.qs('kw'));
+    var marks = rulesBody.querySelectorAll('mark.kw-hit');
+    // 앵커(#rXXX)가 있으면 그 규정 안의 첫 표시로, 없으면 첫 표시로
+    var sec = location.hash ? document.querySelector(location.hash) : null;
+    var m0 = (sec && sec.querySelector('mark.kw-hit')) || marks[0];
+    if (m0) { m0.classList.add('cur'); var go = function () { m0.scrollIntoView({ block: 'center' }); }; setTimeout(go, 100); window.addEventListener('load', function () { setTimeout(go, 200); }); }
+  }
 
   document.addEventListener('db:ready', function () {
     if (demoShown) return;
