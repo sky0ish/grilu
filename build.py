@@ -439,8 +439,8 @@ def _gw_posts(code=None):
         posts = []
     return [p for p in posts if code is None or p["code"] == code]
 
-GW_DIR = {"committee": "gri/committee", "director": "gri/director", "council": "archive/council", "rules": "archive/rules", "news": "news/news", "budget": "gri/budget", "guide": "gri/guide"}
-GW_NAME = {"committee": "심의위원회", "director": "노동이사 활동보고", "council": "노사협의회", "rules": "규약·규정", "news": "노조소식", "budget": "예산결산서", "guide": "가이드라인"}
+GW_DIR = {"committee": "gri/committee", "director": "gri/director", "council": "archive/council", "rules": "archive/rules", "news": "news/news", "budget": "gri/budget", "guide": "gri/guide", "documents": "archive/documents"}
+GW_NAME = {"committee": "심의위원회", "director": "노동이사 활동보고", "council": "노사협의회", "rules": "규약·규정", "news": "노조소식", "budget": "예산결산서", "guide": "가이드라인", "documents": "기타참고자료"}
 
 def gw_rows(code, root):
     posts = _gw_posts(code)
@@ -540,6 +540,10 @@ def p_budget(root):
 def p_news(root):
     intro = '<p>노동조합 소식과 <b>단체교섭·단체협약</b> 관련 공고입니다. 그룹웨어 게시글은 본문·첨부파일 전문을 함께 볼 수 있습니다.</p>'
     return board(root, "노조소식", gw_rows("news", root), intro, code="news", kwmap=gw_kwmap("news"))
+
+def p_documents(root):
+    intro = '<p>노동조합 활동 참고자료와 게시판 분석 글을 모았습니다.</p>'
+    return board(root, "기타참고자료", gw_rows("documents", root), intro, code="documents", kwmap=gw_kwmap("documents"))
 
 def p_staff(root):
     intro = '<p>노동조합 운영진(집행부·대의원)이 운영 사항을 공유하는 게시판입니다. 승인된 조합원만 열람할 수 있으며 글쓰기는 관리자(운영진)만 가능합니다.</p>'
@@ -701,7 +705,7 @@ PAGES = {
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("gri", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
-    ("community", "staff"): p_staff, ("gri", "budget"): p_budget, ("gri", "guide"): p_guide, ("news", "news"): p_news, ("gri", "director"): p_director, ("gri", "committee"): p_committee, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
+    ("community", "staff"): p_staff, ("gri", "budget"): p_budget, ("gri", "guide"): p_guide, ("archive", "documents"): p_documents, ("news", "news"): p_news, ("gri", "director"): p_director, ("gri", "committee"): p_committee, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
 }
 
 # ------------------------------------------------------------------ 메인 페이지
