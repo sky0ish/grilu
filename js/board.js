@@ -304,7 +304,7 @@
         if (!row.title) throw new Error('제목을 입력하세요.');
         if (id) return DB.client.from('posts').update(row).eq('id', id).select().single();
         row.author_id = DB.user.id;
-        row.author_name = (DB.profile && DB.profile.name) || DB.user.email;
+        row.author_name = DB.isAdmin() ? '관리자' : ((DB.profile && DB.profile.name) || DB.user.email.split('@')[0]);
         return DB.client.from('posts').insert(row).select().single();
       }).then(function (r) {
         if (r.error) throw r.error;
