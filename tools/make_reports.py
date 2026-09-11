@@ -141,12 +141,14 @@ except Exception:
 researcher = [(a, b + "<br>" + evidence(k)) for (a, b), k in zip(researcher, keys_r)]
 phd = [(a, b + "<br>" + evidence(k)) for (a, b), k in zip(phd, keys_p)]
 
-body1 = ("<p>홈페이지 게시판(노사협의회 공고·회의록 73건, 단체교섭·단체협약 10건, 심의위원회 19건, 노동이사 활동보고 14건, 행정사무감사 회의록 31건)에 실린 "
-         "노측 건의·요구 사항을 직군별로 모아 정리했습니다. 빈도(반복 제기 횟수)와 최근성(2023년 이후 협의회 안건)을 우선해 순위를 매겼고, 근거가 된 회의·문서를 함께 적었습니다. "
-         "연구원(공무직·무기계약직)과 연구위원급(박사급)에 공통되는 항목은 양쪽에 모두 넣었습니다.</p>"
-         "<h4>1. 연구원(무기계약직·공무직)이 지속적으로 요청하는 사항 Top 20</h4>" + table([(i + 1, a, b) for i, (a, b) in enumerate(researcher)], ["순위", "요구사항", "근거(게시판 자료) · 언급 횟수 · 대표 회의자료"]) +
-         "<h4>2. 연구위원급(박사급)이 원하는 사항 Top 20</h4>" + table([(i + 1, a, b) for i, (a, b) in enumerate(phd)], ["순위", "요구사항", "근거(게시판 자료) · 언급 횟수 · 대표 회의자료"]) +
-         "<p class='note'>※ 게시판에 공개된 회의록·공고 문서만을 근거로 정리한 것이며, 조합 내부 설문이나 비공개 교섭 자료는 포함되지 않았습니다. 각 게시판에서 키워드(예: 평가, 휴가, 보수)를 누르면 근거 문장을 바로 확인할 수 있습니다.</p>")
+intro_common = ("<p>홈페이지 게시판(노사협의회 공고·회의록 73건, 단체교섭·단체협약 10건, 심의위원회 19건, 노동이사 활동보고 14건, 행정사무감사 회의록 31건)에 실린 "
+         "노측 건의·요구 사항을 직군별로 모아 정리했습니다. 빈도(반복 제기 횟수)와 최근성(2023년 이후 협의회 안건)을 우선해 순위를 매겼습니다. "
+         "오른쪽 열의 <b>건수/횟수</b>는 게시판 전체 자료(본문+첨부 전문)에서 해당 주제가 언급된 글 수와 문장 수이며, 대표 자료를 누르면 해당 문장이 형광 표시된 원문이 열립니다.</p>")
+note_common = "<p class='note'>※ 게시판에 공개된 회의록·공고 문서만을 근거로 정리한 것이며, 조합 내부 설문이나 비공개 교섭 자료는 포함되지 않았습니다. 조합의 공식 입장이 아니라 논의용 참고자료입니다.</p>"
+body_phd = (intro_common + "<h4>연구위원급(선임연구위원·연구위원, 박사급) 요청사항 Top 20</h4>" +
+            table([(i + 1, a, b) for i, (a, b) in enumerate(phd)], ["순위", "요구사항", "근거(게시판 자료) · 언급 횟수 · 대표 회의자료"]) + note_common)
+body_res = (intro_common + "<h4>연구원급(공무직군: 연구원·선임연구원·행정직) 요청사항 Top 20</h4>" +
+            table([(i + 1, a, b) for i, (a, b) in enumerate(researcher)], ["순위", "요구사항", "근거(게시판 자료) · 언급 횟수 · 대표 회의자료"]) + note_common)
 
 # ---------------- 2. 문제점 - 개선안 Top 20 ----------------
 issues = [
@@ -181,7 +183,9 @@ body2 = ("<p>게시판에 실린 노사협의회 회의록(2009~2026), 단체교
 
 d = json.load(open(P, encoding="utf-8"))
 d["posts"] = [p for p in d["posts"] if not p["id"].startswith("report-")]
-for pid, title, body in [("report-demands", "게시판 직군별 전체 요구사항 Top 20", body1), ("report-issues", "우리 연구원의 문제점-개선안 Top 20", body2)]:
+for pid, title, body in [("report-issues", "우리 연구원의 문제점-개선안 Top 20", body2),
+                         ("report-demands-res", "연구원급(공무직군) 요청사항 Top 20", body_res),
+                         ("report-demands", "연구위원급(선임급 포함) 요청사항 Top 20", body_phd)]:
     text = html.unescape(__import__("re").sub(r"<[^>]+>", " ", body))
     d["posts"].insert(0, {"id": pid, "code": "documents", "sub": "게시판 분석 자료", "title": title, "author": "관리자", "dept": "노동조합",
                           "date": "2026-09-12", "body_html": body, "body_text": text, "atts": []})
