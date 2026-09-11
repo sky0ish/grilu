@@ -72,10 +72,20 @@
       var cnt = document.querySelector('.board-top .total');
       if (cnt) cnt.textContent = total;
       if (!r.data.length && !q && page === 1) {
-        // 아직 등록된 글이 없으면 예시 목록(정적 HTML)을 그대로 둔다
-        var note = document.querySelector('.static-note'); if (note) note.textContent = '※ 아직 등록된 게시글이 없어 예시 목록이 표시됩니다. 관리자 로그인 후 글쓰기로 등록하세요.';
-        if (cnt) cnt.textContent = tbody.querySelectorAll('tr').length;
-        renderWriteBtn(code); return;
+        DB.client.from('boards').select('members_only').eq('code', code).maybeSingle().then(function (b) {
+          if (b.data && b.data.members_only && !DB.isMember()) {
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#c33">조합원 전용 게시판입니다. 로그인(조합원 승인) 후 이용해 주세요.</td></tr>';
+            if (cnt) cnt.textContent = '-';
+            var pg = document.querySelector('.paging'); if (pg) pg.innerHTML = '';
+            var n2 = document.querySelector('.static-note'); if (n2) n2.remove();
+            return;
+          }
+          // 아직 등록된 글이 없으면 예시 목록(정적 HTML)을 그대로 둔다
+          var note = document.querySelector('.static-note'); if (note) note.textContent = '※ 아직 등록된 게시글이 없어 예시 목록이 표시됩니다. 관리자 로그인 후 글쓰기로 등록하세요.';
+          if (cnt) cnt.textContent = tbody.querySelectorAll('tr').length;
+          renderWriteBtn(code);
+        });
+        return;
       }
       if (!r.data.length) {
         tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#888">등록된 게시글이 없습니다.</td></tr>';
