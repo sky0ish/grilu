@@ -56,3 +56,34 @@ python -m http.server 8765
 - 게시판 글 목록(공지사항, 규정 및 지침, 노사협의회 등)은 모두 **예시 데이터**입니다. 그룹웨어(gw.gri.re.kr)는 내부망이라 외부에서 목록을 가져올 수 없었습니다.
 - 위원장 성함, 조합원 수, 설립연도, 연혁, 집행부 명단은 `○○○` 자리표시자입니다.
 - 게시판 글쓰기·로그인·고충상담 접수는 화면만 있고 실제 저장은 되지 않습니다. 실제 운영하려면 게시판 솔루션(그누보드, 워드프레스 등) 또는 폼 서비스 연동이 필요합니다.
+
+## Supabase 연동 (회원·게시판·일정·고충상담)
+
+1. Supabase 대시보드(프로젝트 GRILU) > **SQL Editor** > `supabase/schema.sql` 내용 전체를 붙여넣고 **Run**.
+2. **Project Settings > API** 에서 `Project URL` 과 `anon public` 키를 복사해 `js/config.js` 에 입력.
+3. 홈페이지에서 회원가입(skyish76@gmail.com) 후, SQL Editor 에서 관리자 지정:
+   ```sql
+   update public.profiles set role='admin', approved=true where email='skyish76@gmail.com';
+   ```
+4. 이후 `/admin/index.html` 에서 회원 승인, 일정 등록, 고충상담 열람이 가능합니다.
+5. 개발 중에는 **Authentication > Providers > Email > Confirm email** 을 꺼 두면 가입 즉시 로그인됩니다.
+
+권한 요약: 공지·규정·노사협의회 등 공식 게시판은 관리자만 글쓰기, 조합원 게시판은 승인된 조합원만 열람·글쓰기,
+고충상담은 누구나 접수 가능하고 관리자만 열람.
+
+## 배포
+
+정적 파일이므로 아래 중 하나로 올리면 됩니다. (`grilu-site.zip` 은 업로드용으로 사이트 파일만 묶은 것)
+
+- **Netlify Drop** (가장 간단): <https://app.netlify.com/drop> 에 폴더(또는 zip)를 끌어다 놓으면 즉시 주소가 생깁니다.
+  이후 Site settings > Domain management 에서 `grilu.kr` 추가.
+- **GitHub Pages**: GitHub 에 저장소를 만들고 이 폴더를 push → Settings > Pages > Branch: main 선택 → Custom domain 에 `grilu.kr` 입력.
+- **Cloudflare Pages / Vercel**: GitHub 저장소 연결 또는 직접 업로드.
+
+### 도메인(grilu.kr) 연결 – DNS 설정 (도메인 구입한 업체의 DNS 관리 화면에서)
+| 호스팅 | 레코드 |
+|---|---|
+| Netlify | `A  @  75.2.60.5` , `CNAME  www  <사이트명>.netlify.app` |
+| GitHub Pages | `A  @  185.199.108.153 / 109.153 / 110.153 / 111.153` , `CNAME  www  <계정>.github.io` |
+
+배포 후 Supabase **Authentication > URL Configuration > Site URL** 을 `https://grilu.kr` 로 바꿔야 비밀번호 재설정 메일 링크가 올바르게 동작합니다.
