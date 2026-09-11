@@ -151,6 +151,7 @@
         '<div class="post-body">' + content + '</div>' + attachHtml(p.attachments) +
         '<div class="board-bottom" style="justify-content:space-between"><a href="' + listUrl(p.board) + '" class="btn line">목록</a>' +
         ((mine || DB.isAdmin()) ? '<span><a href="' + writeUrl(p.board, p.id) + '" class="btn">수정</a> <a href="#" id="delBtn" class="btn" style="background:#c33">삭제</a></span>' : '') + '</div>';
+      loadFullText(p);
       var del = document.getElementById('delBtn');
       if (del) del.addEventListener('click', function (e) {
         e.preventDefault();
@@ -161,6 +162,29 @@
         });
       });
     });
+  }
+
+
+  // 이관 자료(행정사무감사 등)는 본문 전문이 사이트 정적 페이지에 있으므로 불러와 합친다
+  function loadFullText(p) {
+    var a = p.attachments || {};
+    var legacy = a.legacy_id || '';
+    if (legacy.indexOf('audit-') !== 0) return;
+    var url = DB.root + 'gri/audit/' + legacy.slice(6) + '.html';
+    var body = document.querySelector('#postView .post-body');
+    if (!body) return;
+    var note = document.createElement('p'); note.className = 'note'; note.textContent = '회의록 전문을 불러오는 중...'; body.appendChild(note);
+    fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var full = doc.querySelector('.post-body.minutes');
+      if (!full) throw new Error('no body');
+      var head = body.querySelector('.box');
+      body.innerHTML = '';
+      if (head) body.appendChild(head);
+      var wrap = document.createElement('div'); wrap.className = 'minutes'; wrap.style.cssText = 'line-height:1.85;font-size:15px';
+      wrap.innerHTML = full.innerHTML;
+      body.appendChild(wrap);
+    }).catch(function () { note.textContent = '전문을 불러오지 못했습니다. 위 링크에서 확인하세요.'; });
   }
 
   // ---------- 쓰기 / 수정 ----------
