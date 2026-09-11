@@ -124,14 +124,35 @@
     var dataEl = box.querySelector('.board-kw-data'); var map = {};
     try { map = JSON.parse(dataEl.textContent); } catch (e) {}
     var cur = '';
+    function escRe(str) { var BS = String.fromCharCode(92); return str.split('').map(function (c) { return /[A-Za-z0-9가-힣 ]/.test(c) ? c : BS + c; }).join(''); }
+    function kwSentences(text, kw, max) {
+      // 키워드가 들어간 문장들 (최대 max개) — 문장 단위로 잘라 형광 표시
+      var out = [], re = new RegExp('[^.!?。' + String.fromCharCode(10) + ']*' + escRe(kw) + '[^.!?。' + String.fromCharCode(10) + ']*[.!?。]?', 'g'), m, n = 0;
+      while ((m = re.exec(text)) && n < max) { var t = m[0].trim(); if (t.length > 6) { out.push(t.length > 220 ? t.slice(0, 220) + '…' : t); n++; } }
+      return out;
+    }
     function apply() {
       var rows = document.querySelectorAll('table.tbl[data-board] tbody tr[data-legacy]');
       var shown = 0;
       rows.forEach(function (tr) {
-        var ok = !cur || ((map[tr.getAttribute('data-legacy')] || []).indexOf(cur) >= 0);
+        var lid = tr.getAttribute('data-legacy');
+        var ok = !cur || ((map[lid] || []).indexOf(cur) >= 0);
         tr.style.display = ok ? '' : 'none'; if (ok) shown++;
         var a = tr.querySelector('.tit a');
         if (a) { if (!a.getAttribute('data-href')) a.setAttribute('data-href', a.getAttribute('href')); var h = a.getAttribute('data-href'); a.setAttribute('href', cur ? h + (h.indexOf('?') >= 0 ? '&' : '?') + 'kw=' + encodeURIComponent(cur) : h); }
+        var old = tr.querySelector('.kw-snips'); if (old) old.remove();
+        if (ok && cur && idxCache) {
+          var it = idxCache.filter(function (x) { return x.l === lid; })[0];
+          if (it) {
+            var sents = kwSentences(it.x, cur, 4);
+            if (sents.length) {
+              var hlre = new RegExp('(' + escRe(cur) + ')', 'g');
+              var box = document.createElement('div'); box.className = 'kw-snips';
+              box.innerHTML = sents.map(function (t) { return '<a href="' + a.getAttribute('href') + '">' + esc(t).replace(hlre, '<mark style="background:#fff2a8;padding:0 2px">$1</mark>') + '</a>'; }).join('');
+              tr.querySelector('.tit').appendChild(box);
+            }
+          }
+        }
       });
       var cnt = document.querySelector('.board-top .total'); if (cnt && cur) cnt.textContent = shown + ' (키워드 "' + cur + '")';
       var pg = document.querySelector('.paging'); if (pg) pg.style.display = cur ? 'none' : '';
@@ -142,8 +163,9 @@
       var kw = a.getAttribute('data-kw');
       if (cur === kw) { cur = ''; apply(); if (DB.ready) location.reload(); return; }
       cur = kw;
-      // DB 목록은 한 페이지만 보이므로, 키워드 필터 때는 전체 글을 불러와 표시
+      // DB 목록은 한 페이지만 보이므로, 키워드 필터 때는 전체 글을 불러와 표시 (+ 전문 색인으로 문장 표시)
       var tbl = document.querySelector('table.tbl[data-board]'); var code = tbl && tbl.getAttribute('data-board');
+      loadIndex().then(function () {
       if (DB.ready && code) {
         DB.client.from('posts').select('id,title,author_name,created_at,views,is_notice,attachments').eq('board', code).order('created_at', { ascending: false }).limit(500).then(function (r) {
           if (r.error || !r.data.length) { apply(); return; }
@@ -155,6 +177,7 @@
           apply();
         });
       } else apply();
+      });
     });
   }
   bindBoardKw();

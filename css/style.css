@@ -428,3 +428,7 @@ mark.kw-hit.cur{background:#f39800;color:#fff}
 .board-kw{margin:0 0 18px}
 .board-kw a.kw .note{font-size:11px;color:#999;margin-left:1px}
 .board-kw a.kw.on .note,.board-kw a.kw:hover .note{color:#ffe9b0}
+
+.kw-snips{margin-top:6px;font-size:13px;line-height:1.55;color:#555}
+.kw-snips a{display:block;padding:3px 8px;margin:2px 0;background:#fafbfd;border-left:3px solid #ffd27a;border-radius:0 4px 4px 0;white-space:normal;color:#444}
+.kw-snips a:hover{background:#f1f5fb}
