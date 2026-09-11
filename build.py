@@ -168,9 +168,10 @@ def demo_href(root, title, date, writer="노동조합", code=""):
 def rows_html(rows, root="../", code=""):
     out = []
     for i, r in enumerate(rows):
-        num, title, writer, date, hit = r
-        badge = ' <span class="badge new" style="font-size:11px;color:#fff;background:#e5533c;padding:1px 6px;border-radius:3px">N</span>' if i < 2 else ""
-        out.append(f'<tr><td class="num">{num}</td><td class="tit"><a href="{demo_href(root, title, date, writer, code)}">{title}</a>{badge}</td><td class="writer">{writer}</td><td class="date">{date}</td><td class="hit">{hit}</td></tr>')
+        num, title, writer, date, hit = r[:5]
+        link = r[5] if len(r) > 5 else demo_href(root, title, date, writer, code)
+        badge = ' <span class="badge new" style="font-size:11px;color:#fff;background:#e5533c;padding:1px 6px;border-radius:3px">N</span>' if (i < 2 and len(r) <= 5) else ""
+        out.append(f'<tr><td class="num">{num}</td><td class="tit"><a href="{link}">{title}</a>{badge}</td><td class="writer">{writer}</td><td class="date">{date}</td><td class="hit">{hit}</td></tr>')
     return "".join(out)
 
 def board(root, name, rows=None, intro="", extra_btn="", code=""):
@@ -343,7 +344,7 @@ def p_audit(root):
         data = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "audit.json"), encoding="utf-8"))
     except Exception:
         data = []
-    rows = [(len(data) - i, f'{r["title"]} — {r["committee"]}', "경기도의회", r["date"], "-") for i, r in enumerate(data)]
+    rows = [(len(data) - i, f'{r["title"]} — {r["committee"]}', "경기도의회", r["date"], "-", f'audit/{r["id"]}.html') for i, r in enumerate(data)]
     intro = """
 <div class="info-cards" style="margin-bottom:24px">
   <div class="item"><div class="ico">&#127963;</div><b>행정사무감사</b><p>경기도의회가 매년 11월 도 산하기관을 대상으로 실시하는 감사. 경기연구원은 주로 <b>기획재정위원회</b> 소관입니다.</p></div>
@@ -354,6 +355,32 @@ def p_audit(root):
 """
     btn = '<a href="https://kms.ggc.go.kr/svc/cms/mnts/MntsTreeAuditList.do" target="_blank" rel="noopener" class="btn line">경기도의회 회의록 원문</a>'
     return board(root, "행정사무감사", rows, intro, btn, code="audit")
+
+def audit_pages():
+    import json as _json
+    try:
+        data = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "audit.json"), encoding="utf-8"))
+    except Exception:
+        return 0
+    for i, r in enumerate(data):
+        prev_ = data[i + 1] if i + 1 < len(data) else None
+        next_ = data[i - 1] if i > 0 else None
+        nav = ""
+        if next_: nav += f'<tr><th style="text-align:left;width:90px">다음글</th><td style="text-align:left"><a href="{next_["id"]}.html">{next_["title"]} — {next_["committee"]}</a></td></tr>'
+        if prev_: nav += f'<tr><th style="text-align:left">이전글</th><td style="text-align:left"><a href="{prev_["id"]}.html">{prev_["title"]} — {prev_["committee"]}</a></td></tr>'
+        body = f"""
+<article class="post">
+  <div class="post-head" style="border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px">
+    <span class="badge" style="font-size:12px;color:#fff;background:var(--primary);padding:2px 8px;border-radius:4px">제{r["daesu"]}대 경기도의회 · {r["committee"]}</span>
+    <h4 style="border:0;padding:0;margin:8px 0 6px;color:#222;font-size:24px">{r["title"]}</h4>
+    <div class="note">{r["audit"]} &nbsp;|&nbsp; 회의일 {r["date"]} &nbsp;|&nbsp; 출처 경기도의회 회의록시스템</div>
+  </div>
+  <div class="post-body minutes" style="line-height:1.85;font-size:15px">{r["body"] or "<p class='note'>본문은 원문 링크에서 확인하세요.</p>"}</div>
+  <table class="tbl" style="margin-top:24px">{nav}</table>
+  <div class="board-bottom" style="justify-content:space-between"><a href="../audit.html" class="btn line">목록</a><a href="{r["url"]}" target="_blank" rel="noopener" class="btn">경기도의회 원문 보기</a></div>
+</article>"""
+        write(f"gri/audit/{r['id']}.html", simple_page(f'{r["title"]} — 행정사무감사', body, wide=True))
+    return len(data)
 
 def p_photo(root):
     caps = ["2026년 정기 대의원대회", "신규 조합원 환영 간담회", "노사협의회 상견례", "조합원 한마음 체육행사",
@@ -617,7 +644,8 @@ JOIN = """
 <p>홈페이지 회원가입은 조합원 확인 후 승인됩니다. 이메일이 로그인 아이디가 됩니다.</p>
 <form id="joinForm">
 <table class="tbl form-tbl">
-<tr><th>성명</th><td><input type="text" name="name" required></td></tr><tr><th>소속</th><td><input type="text" name="dept" placeholder="예: ○○연구실"></td></tr>
+<tr><th>성명</th><td><input type="text" name="name" required></td></tr><tr><th>소속(부서명)</th><td><input type="text" name="dept" placeholder="예: 도시주택연구실" required></td></tr>
+<tr><th>직급</th><td><select name="position" required><option value="">선택</option><option>선임연구위원</option><option>연구위원</option><option>선임연구원</option><option>연구원</option><option>행정직</option></select></td></tr>
 <tr><th>이메일</th><td><input type="email" name="email" required autocomplete="username"></td></tr>
 <tr><th>비밀번호</th><td><input type="password" name="password" required minlength="6" autocomplete="new-password"></td></tr>
 <tr><th>비밀번호 확인</th><td><input type="password" name="password2" required minlength="6" autocomplete="new-password"></td></tr></table>
@@ -634,7 +662,8 @@ MYPAGE = """
 <form id="myForm"><table class="tbl form-tbl">
 <tr><th>이메일</th><td><input type="email" name="email" disabled></td></tr>
 <tr><th>성명</th><td><input type="text" name="name"></td></tr>
-<tr><th>소속</th><td><input type="text" name="dept"></td></tr>
+<tr><th>소속(부서명)</th><td><input type="text" name="dept"></td></tr>
+<tr><th>직급</th><td><select name="position"><option value="">선택</option><option>선임연구위원</option><option>연구위원</option><option>선임연구원</option><option>연구원</option><option>행정직</option></select></td></tr>
 <tr><th>새 비밀번호</th><td><input type="password" name="password" placeholder="변경할 때만 입력" autocomplete="new-password"></td></tr>
 </table><div class="board-bottom" style="justify-content:center"><button type="submit" class="btn">저장</button></div></form>
 """
@@ -676,7 +705,7 @@ ADMIN = """
   <div class="item"><small>미처리 고충상담</small><b data-stat="counsel">-</b><p>접수 상태</p></div>
 </div>
 <h4>최근 가입 회원</h4>
-<div style="overflow-x:auto"><table class="tbl" id="recentMembers"><thead><tr><th>성명</th><th>이메일</th><th>소속</th><th>가입일</th><th>상태</th></tr></thead><tbody><tr><td colspan="5">불러오는 중...</td></tr></tbody></table></div>
+<div style="overflow-x:auto"><table class="tbl" id="recentMembers"><thead><tr><th>성명</th><th>이메일</th><th>소속</th><th>직급</th><th>가입일</th><th>상태</th></tr></thead><tbody><tr><td colspan="6">불러오는 중...</td></tr></tbody></table></div>
 </div>
 """ % admin_nav("index")
 
@@ -690,7 +719,7 @@ ADMIN_MEMBERS = """
   <button class="btn line" id="memberCsv" type="button">CSV 내려받기</button>
   <span class="cnt" id="memberCount"></span>
 </div>
-<div style="overflow-x:auto"><table class="tbl" id="memberTbl"><thead><tr><th style="width:120px">성명</th><th>이메일</th><th style="width:160px">소속</th><th style="width:100px">가입일</th><th style="width:90px">상태</th><th style="width:250px">관리</th></tr></thead><tbody><tr><td colspan="6">불러오는 중...</td></tr></tbody></table></div>
+<div style="overflow-x:auto"><table class="tbl" id="memberTbl"><thead><tr><th style="width:120px">성명</th><th>이메일</th><th style="width:150px">소속</th><th style="width:120px">직급</th><th style="width:100px">가입일</th><th style="width:90px">상태</th><th style="width:250px">관리</th></tr></thead><tbody><tr><td colspan="7">불러오는 중...</td></tr></tbody></table></div>
 <p class="note" style="margin-top:12px">※ "탈퇴"는 홈페이지 회원 정보를 삭제하고 로그인 권한을 없앱니다. 로그인 계정 자체를 완전히 삭제하려면 Supabase 대시보드 &gt; Authentication &gt; Users 에서 삭제하세요.</p>
 </div>
 """ % admin_nav("members")
@@ -743,6 +772,7 @@ def main():
     write("board/view.html", simple_page("게시글", VIEW, wide=True))
     write("board/write.html", simple_page("글쓰기", WRITE, wide=True))
     write("board/search.html", simple_page("자료검색", SEARCH, wide=True))
+    n += audit_pages()
     write("admin/index.html", simple_page("관리자", ADMIN, wide=True))
     write("admin/members.html", simple_page("회원관리", ADMIN_MEMBERS, wide=True))
     write("admin/events.html", simple_page("일정관리", ADMIN_EVENTS, wide=True))

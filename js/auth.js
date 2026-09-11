@@ -28,7 +28,7 @@
       if (join.password.value !== join.password2.value) { alert('비밀번호가 서로 다릅니다.'); return false; }
       DB.client.auth.signUp({
         email: join.email.value.trim(), password: join.password.value,
-        options: { data: { name: join.name.value.trim(), dept: join.dept.value.trim() } }
+        options: { data: { name: join.name.value.trim(), dept: join.dept.value.trim(), position: join.position.value } }
       }).then(function (r) {
         if (r.error) return alert('가입 실패: ' + r.error.message);
         var needConfirm = r.data && r.data.user && !r.data.session;
@@ -50,11 +50,11 @@
     if (my) {
       if (!DB.requireLogin()) return;
       my.email.value = DB.user.email;
-      if (DB.profile) { my.name.value = DB.profile.name || ''; my.dept.value = DB.profile.dept || ''; }
+      if (DB.profile) { my.name.value = DB.profile.name || ''; my.dept.value = DB.profile.dept || ''; if (my.position) my.position.value = DB.profile.position || ''; }
       var st = document.getElementById('myStatus');
       if (st) st.textContent = DB.isAdmin() ? '관리자' : (DB.isMember() ? '승인된 조합원' : '승인 대기 중 (관리자 확인 후 조합원 게시판 이용 가능)');
       my.onsubmit = function () {
-        var jobs = [DB.client.from('profiles').update({ name: my.name.value.trim(), dept: my.dept.value.trim() }).eq('id', DB.user.id)];
+        var jobs = [DB.client.from('profiles').update({ name: my.name.value.trim(), dept: my.dept.value.trim(), position: my.position ? my.position.value : null }).eq('id', DB.user.id)];
         if (my.password.value) {
           if (my.password.value.length < 6) { alert('비밀번호는 6자 이상이어야 합니다.'); return false; }
           jobs.push(DB.client.auth.updateUser({ password: my.password.value }));

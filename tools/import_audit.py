@@ -17,6 +17,7 @@ TREE = BASE + "/svc/cms/mnts/MntsTreeAuditList.do"
 KEYS = ("경기연구원", "경기개발연구원")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WITH_BODY = "--no-body" not in sys.argv
+SQL_ONLY = "--sql-only" in sys.argv
 
 S = requests.Session()
 S.headers["User-Agent"] = "Mozilla/5.0 (grilu.kr archive bot)"
@@ -67,6 +68,8 @@ def fetch_body(mid):
         print("  body fail", mid, e); return ""
 
 def main():
+    if SQL_ONLY:
+        found = json.load(open(os.path.join(ROOT, "data", "audit.json"), encoding="utf-8")); return write_sql(found)
     found = []
     seen = set()
     r = S.get(TREE, timeout=30); r.encoding = "utf-8"
@@ -108,17 +111,26 @@ def main():
     os.makedirs(os.path.join(ROOT, "data"), exist_ok=True)
     json.dump(found, open(os.path.join(ROOT, "data", "audit.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
-    # ---- Supabase seed SQL ----
+    write_sql(found)
+
+def write_sql(found):
     def q(s): return "'" + (s or "").replace("'", "''") + "'"
     out = ["-- 경기도의회 행정사무감사 회의록(경기연구원 관련) 이관 데이터 (자동 생성: tools/import_audit.py)",
            "-- 게시판 코드 audit. 여러 번 실행해도 중복되지 않습니다.",
            "insert into public.boards (code,name,members_only,admin_only_write) values ('audit','행정사무감사',false,true) on conflict (code) do nothing;",
            "create unique index if not exists posts_legacy_idx on public.posts ((attachments->>'legacy_id')) where attachments ? 'legacy_id';"]
+    def excerpt(body, n=1200):
+        t = re.sub(r"<[^>]+>", " ", body or ""); t = re.sub(r"\s+", " ", t).strip()
+        k = t.find("경기연구원") if "경기연구원" in t else t.find("경기개발연구원")
+        st = max(0, k - 200) if k > 0 else 0
+        return ("…" if st else "") + t[st:st + n] + ("…" if len(t) > st + n else "")
     for r in found:
-        head = (f'<div class="box" style="margin-bottom:16px"><b>제{r["daesu"]}대 경기도의회 {r["committee"]}</b> · {r["audit"]}<br>'
-                f'원문: <a href="{r["url"]}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">경기도의회 회의록 뷰어에서 보기</a></div>')
-        content = head + (r["body"] or "<p class='note'>본문은 원문 링크에서 확인하세요.</p>")
-        att = json.dumps({"legacy_id": "audit-" + r["id"], "files": [], "source": "kms.ggc.go.kr 행정사무감사", "url": r["url"]}, ensure_ascii=False)
+        page = f'https://grilu.kr/gri/audit/{r["id"]}.html'
+        content = (f'<div class="box" style="margin-bottom:16px"><b>제{r["daesu"]}대 경기도의회 {r["committee"]}</b> · {r["audit"]}<br>'
+                   f'<a href="{page}" style="color:var(--primary);text-decoration:underline;font-weight:700">▶ 회의록 전문 보기</a> &nbsp;|&nbsp; '
+                   f'<a href="{r["url"]}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">경기도의회 원문</a></div>'
+                   f'<p style="line-height:1.8;color:#444">{html.escape(excerpt(r["body"]))}</p>')
+        att = json.dumps({"legacy_id": "audit-" + r["id"], "files": [], "source": "kms.ggc.go.kr 행정사무감사", "url": r["url"], "page": page}, ensure_ascii=False)
         title = f'{r["title"]} — {r["committee"]} {r["audit"].split("(")[0].strip()}'
         out.append(f"insert into public.posts (board,title,content,author_name,is_notice,attachments,created_at,updated_at) "
                    f"select 'audit',{q(title)},{q(content)},'경기도의회',false,{q(att)}::jsonb,{q(r['date'] or '2000-01-01')}::date,{q(r['date'] or '2000-01-01')}::date "

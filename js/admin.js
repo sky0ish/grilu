@@ -34,8 +34,8 @@
       set('pending', r.data.filter(function (p) { return !p.approved && p.role !== 'admin'; }).length + '명');
       var tb = document.querySelector('#recentMembers tbody');
       tb.innerHTML = r.data.slice(0, 8).map(function (p) {
-        return '<tr><td>' + esc(p.name || '-') + '</td><td>' + esc(p.email) + '</td><td>' + esc(p.dept || '-') + '</td><td>' + fmt(p.created_at) + '</td><td>' + statusBadge(p) + '</td></tr>';
-      }).join('') || '<tr><td colspan="5">회원이 없습니다.</td></tr>';
+        return '<tr><td>' + esc(p.name || '-') + '</td><td>' + esc(p.email) + '</td><td>' + esc(p.dept || '-') + '</td><td>' + esc(p.position || '-') + '</td><td>' + fmt(p.created_at) + '</td><td>' + statusBadge(p) + '</td></tr>';
+      }).join('') || '<tr><td colspan="6">회원이 없습니다.</td></tr>';
     });
     var now = new Date(), p2 = function (n) { return (n < 10 ? '0' : '') + n; };
     var from = now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-01';
@@ -69,7 +69,7 @@
       if (f === 'pending' && (p.approved || p.role === 'admin')) return false;
       if (f === 'approved' && !(p.approved && p.role !== 'admin')) return false;
       if (f === 'admin' && p.role !== 'admin') return false;
-      if (kw && ((p.name || '') + ' ' + (p.email || '') + ' ' + (p.dept || '')).toLowerCase().indexOf(kw) < 0) return false;
+      if (kw && ((p.name || '') + ' ' + (p.email || '') + ' ' + (p.dept || '') + ' ' + (p.position || '')).toLowerCase().indexOf(kw) < 0) return false;
       return true;
     });
   }
@@ -77,7 +77,7 @@
     var tb = document.querySelector('#memberTbl tbody');
     var list = filtered();
     document.getElementById('memberCount').textContent = list.length + '명 / 전체 ' + members.length + '명';
-    if (!list.length) { tb.innerHTML = '<tr><td colspan="6" style="padding:30px;color:#888">해당하는 회원이 없습니다.</td></tr>'; return; }
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="7" style="padding:30px;color:#888">해당하는 회원이 없습니다.</td></tr>'; return; }
     var me = DB.user.id;
     tb.innerHTML = list.map(function (p) {
       var self = p.id === me;
@@ -85,6 +85,7 @@
         '<td><input class="inline" data-f="name" value="' + esc(p.name || '') + '"></td>' +
         '<td style="text-align:left">' + esc(p.email) + (self ? ' <span class="note">(나)</span>' : '') + '</td>' +
         '<td><input class="inline" data-f="dept" value="' + esc(p.dept || '') + '"></td>' +
+        '<td><select class="inline" data-f="position">' + '<option value="">-</option>' + '<option' + (p.position === '선임연구위원' ? ' selected' : '') + '>선임연구위원</option>' + '<option' + (p.position === '연구위원' ? ' selected' : '') + '>연구위원</option>' + '<option' + (p.position === '선임연구원' ? ' selected' : '') + '>선임연구원</option>' + '<option' + (p.position === '연구원' ? ' selected' : '') + '>연구원</option>' + '<option' + (p.position === '행정직' ? ' selected' : '') + '>행정직</option>' + '</select></td>' +
         '<td>' + fmt(p.created_at) + '</td><td>' + statusBadge(p) + '</td>' +
         '<td><button class="btn sm" data-act="save">저장</button> ' +
         (self ? '' :
@@ -101,8 +102,8 @@
         var p = members.filter(function (x) { return x.id === id; })[0];
         var done = function (r) { if (r && r.error) alert('실패: ' + r.error.message); loadMembers(); };
         if (act === 'save') {
-          var patch = { name: tr.querySelector('[data-f=name]').value.trim(), dept: tr.querySelector('[data-f=dept]').value.trim() };
-          return DB.client.from('profiles').update(patch).eq('id', id).then(function (r) { if (r.error) alert(r.error.message); else { b.textContent = '저장됨'; setTimeout(function () { b.textContent = '저장'; }, 1200); p.name = patch.name; p.dept = patch.dept; } });
+          var patch = { name: tr.querySelector('[data-f=name]').value.trim(), dept: tr.querySelector('[data-f=dept]').value.trim(), position: tr.querySelector('[data-f=position]').value || null };
+          return DB.client.from('profiles').update(patch).eq('id', id).then(function (r) { if (r.error) alert(r.error.message); else { b.textContent = '저장됨'; setTimeout(function () { b.textContent = '저장'; }, 1200); p.name = patch.name; p.dept = patch.dept; p.position = patch.position; } });
         }
         if (act === 'approve') return DB.client.from('profiles').update({ approved: true }).eq('id', id).then(done);
         if (act === 'revoke') { if (!confirm(p.email + ' 회원의 승인을 취소할까요?')) return; return DB.client.from('profiles').update({ approved: false }).eq('id', id).then(done); }
@@ -116,8 +117,8 @@
     });
   }
   function exportCsv() {
-    var rows = [['성명', '이메일', '소속', '상태', '가입일']].concat(filtered().map(function (p) {
-      return [p.name || '', p.email || '', p.dept || '', p.role === 'admin' ? '관리자' : (p.approved ? '승인' : '대기'), fmt(p.created_at)];
+    var rows = [['성명', '이메일', '소속', '직급', '상태', '가입일']].concat(filtered().map(function (p) {
+      return [p.name || '', p.email || '', p.dept || '', p.position || '', p.role === 'admin' ? '관리자' : (p.approved ? '승인' : '대기'), fmt(p.created_at)];
     }));
     var csv = '﻿' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
     var a = document.createElement('a');

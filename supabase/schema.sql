@@ -10,6 +10,7 @@ create table if not exists public.profiles (
   email       text,
   name        text,
   dept        text,
+  position    text,                                 -- 직급
   role        text not null default 'member' check (role in ('member','admin')),
   approved    boolean not null default false,        -- 조합원 확인 후 관리자가 승인
   created_at  timestamptz not null default now()
@@ -19,10 +20,11 @@ create table if not exists public.profiles (
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, email, name, dept)
+  insert into public.profiles (id, email, name, dept, position)
   values (new.id, new.email,
           coalesce(new.raw_user_meta_data->>'name', ''),
-          coalesce(new.raw_user_meta_data->>'dept', ''))
+          coalesce(new.raw_user_meta_data->>'dept', ''),
+          nullif(new.raw_user_meta_data->>'position', ''))
   on conflict (id) do nothing;
   return new;
 end $$;
