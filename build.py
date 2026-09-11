@@ -26,13 +26,13 @@ MENUS = [
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
         ("council", "노사협의회"), ("agreement", "단체협약"), ("rules", "규약·규정"), ("law", "노동관계법령"),
-        ("director", "노동이사 활동보고"), ("delegate", "대의원 회의자료"), ("documents", "기타참고자료"),
+        ("delegate", "대의원 회의자료"), ("documents", "기타참고자료"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
         ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"), ("wish", "노조에 바란다"),
     ]),
     ("gri", "GRI", "경기연구원 관련 공개 자료", [
-        ("audit", "행정사무감사"), ("regulations", "제규정"), ("regulation", "규정 및 지침"), ("calendar", "일정 달력"),
+        ("audit", "행정사무감사"), ("committee", "심의위원회"), ("director", "노동이사 활동보고"), ("regulations", "제규정"), ("regulation", "규정 및 지침"), ("calendar", "일정 달력"),
     ]),
 ]
 
@@ -146,13 +146,17 @@ def sub_page(sec, page):
     pname = dict(subs)[page]
     lnb = "".join(f'<li{" class=\"on\"" if p == page else ""}><a href="{href(root, sec, p)}">{n}</a></li>' for p, n in subs)
     body = PAGES.get((sec, page), lambda r: board(r, pname, code=page))(root)
+    m = re.search(r"<!--SEARCH-->(.*?)<!--/SEARCH-->", body, re.S)
+    search_form = m.group(1) if m else ""
+    if m: body = body.replace(m.group(0), "")
+    title_html = f'<div class="page-head"><h3 class="page-title">{pname}</h3>{search_form}</div>' if search_form else f'<h3 class="page-title">{pname}</h3>'
     return head(root, pname) + header(root, sec) + f"""
 <section class="sub-visual"><div class="wrap"><h2>{name}</h2><p>{tagline}</p></div></section>
 <div class="crumb"><div class="wrap"><a href="{root}index.html">홈</a><span>{name}</span><span>{pname}</span></div></div>
 <div class="wrap sub-body">
   <aside class="lnb"><h3>{name}</h3><ul>{lnb}</ul></aside>
   <main class="content">
-    <h3 class="page-title">{pname}</h3>
+    {title_html}
     {body}
   </main>
 </div>
@@ -176,9 +180,9 @@ def board(root, name, rows=None, intro="", extra_btn="", code=""):
     rows = rows or [(len(SAMPLE) - i, f"[{name}] 예시 게시글 {len(SAMPLE)-i}", "노동조합", d, h) for i, (d, h) in enumerate(SAMPLE)]
     return f"""
 {intro}
+<!--SEARCH--><form class="board-search" onsubmit="return false"><select name="f"><option value="title">제목</option><option value="content">내용</option><option value="author">작성자</option></select><input type="search" name="q" placeholder="검색어를 입력하세요"><button type="submit" class="in-board" title="이 게시판 안에서만 검색">게시판내 검색</button><button type="button" class="all-site line" title="홈페이지 전체 검색">전체 검색</button></form><!--/SEARCH-->
 <div class="board-top">
   <span>전체 <b class="total">{len(rows)}</b>건</span>
-  <form class="board-search" onsubmit="return false"><select name="f"><option value="title">제목</option><option value="content">내용</option><option value="author">작성자</option></select><input type="search" name="q" placeholder="검색어"><button type="submit" class="in-board" title="이 게시판 안에서만 검색">게시판내 검색</button><button type="button" class="all-site line" title="홈페이지 전체 검색">전체 검색</button></form>
 </div>
 <table class="tbl" data-board="{code}">
   <thead><tr><th class="num">번호</th><th>제목</th><th class="writer">작성자</th><th class="date">작성일</th><th class="hit">조회</th></tr></thead>
@@ -310,28 +314,11 @@ def p_regulation(root):
     return board(root, "규정 및 지침", rows, intro, btn, code="regulation")
 
 def p_council(root):
-    rows = [(10, "2026년 3분기 노사협의회 안건 사전 안내", "노동조합", "2026-09-08", 88),
-            (9, "2026년 2분기 노사협의회 회의록", "노동조합", "2026-06-30", 245),
-            (8, "2026년 2분기 노사협의회 안건 접수 안내", "노동조합", "2026-06-02", 132),
-            (7, "2026년 1분기 노사협의회 회의록", "노동조합", "2026-03-31", 301),
-            (6, "노사협의회 근로자위원 명단 (제○기)", "노동조합", "2026-01-10", 177),
-            (5, "2025년 4분기 노사협의회 회의록", "노동조합", "2025-12-22", 264),
-            (4, "2025년 3분기 노사협의회 회의록", "노동조합", "2025-09-29", 198),
-            (3, "2025년 2분기 노사협의회 회의록", "노동조합", "2025-06-30", 220),
-            (2, "노사협의회 운영규정", "노동조합", "2025-03-05", 156),
-            (1, "노사협의회 소개 및 운영 안내", "노동조합", "2025-01-06", 389)]
     intro = f"""
-<div class="info-cards" style="margin-bottom:24px">
-  <div class="item"><div class="ico">&#128101;</div><b>구성</b><p>근로자위원과 사용자위원 각 ○명으로 구성, 분기별 1회 정기 개최</p></div>
-  <div class="item"><div class="ico">&#128203;</div><b>협의사항</b><p>근로조건, 복지, 인사·노무관리 제도 개선, 고충처리 등</p></div>
-  <div class="item"><div class="ico">&#128172;</div><b>안건 제안</b><p>조합원 누구나 노동조합을 통해 협의 안건을 제안할 수 있습니다</p></div>
-</div>
-<p>노사협의회 회의록, 안건, 결과를 공유하는 게시판입니다. 원본 자료는 그룹웨어 게시판(<a href="{GW_REG_URL}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">바로가기</a>, 내부망)에서 확인할 수 있습니다.</p>
-<p class="note">※ 아래 목록은 예시입니다. 그룹웨어는 외부 접근이 불가하여 실제 게시글을 가져오지 못했습니다.</p>
+<p>노사협의회 <b>공고 및 회의록</b>, <b>운영규약</b>, <b>안건 제안</b> 게시글입니다. 경기연구원 그룹웨어 노사협의회 게시판의 본문과 첨부파일(회의록 등)을 전문 그대로 옮겼습니다. 제목을 누르면 본문·첨부파일·회의록 전문을 볼 수 있습니다.</p>
 """
     btn = f'<a href="{GW_REG_URL}" target="_blank" rel="noopener" class="btn line">그룹웨어 원문 보기</a>'
-    return board(root, "노사협의회", rows, intro, btn, code="council")
-
+    return board(root, "노사협의회", gw_rows("council", root), intro, btn, code="council")
 
 def p_othernews(root):
     """빅카인즈 자동 수집 뉴스 (data/othernews.json, tools/fetch_news.py 가 매일 갱신)"""
@@ -428,6 +415,77 @@ def p_director(root):
 <p>노동이사의 이사회 활동과 결과를 조합원께 보고하는 게시판입니다.</p>"""
     return board(root, "노동이사 활동보고", None, intro, code="director")
 
+def _gw_posts(code=None):
+    import json as _json
+    try:
+        posts = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "gw_posts.json"), encoding="utf-8"))["posts"]
+    except Exception:
+        posts = []
+    return [p for p in posts if code is None or p["code"] == code]
+
+GW_DIR = {"committee": "gri/committee", "director": "gri/director", "council": "archive/council"}
+GW_NAME = {"committee": "심의위원회", "director": "노동이사 활동보고", "council": "노사협의회"}
+
+def gw_rows(code, root):
+    posts = _gw_posts(code)
+    rows = []
+    for i, p in enumerate(posts):
+        sub = f' <span class="note">[{p["sub"]}]</span>' if code == "council" and p["sub"] != "공고 및 회의록" else ""
+        att = ' <span title="첨부">&#128206;</span>' if p["atts"] else ""
+        rows.append((len(posts) - i, p["title"] + sub + att, p["author"], p["date"], "-", f'{root}{GW_DIR[code]}/{p["id"]}.html'))
+    return rows
+
+def p_committee(root):
+    intro = '<p>경기연구원 <b>심의위원회 상정(안)</b>과 직원 의견청취 안내입니다. 그룹웨어(제규정 &gt; 심의위원회 상정(안)) 게시글과 첨부 안건 파일의 전문을 그대로 옮겼습니다. 제목을 누르면 본문·첨부파일·첨부 문서 전문을 볼 수 있습니다.</p>'
+    return board(root, "심의위원회", gw_rows("committee", root), intro, code="committee")
+
+def p_director(root):
+    intro = '<p>경기연구원 <b>노동이사</b>의 활동보고와 선출 관련 공고입니다. 그룹웨어 공지 게시판에서 옮겨 왔으며, 첨부된 활동보고서 전문을 함께 볼 수 있습니다.</p>'
+    return board(root, "노동이사 활동보고", gw_rows("director", root), intro, code="director")
+
+def gw_pages():
+    import json as _json, html as _html
+    posts = _gw_posts()
+    n = 0
+    for code in GW_DIR:
+        items = [p for p in posts if p["code"] == code]
+        for i, p in enumerate(items):
+            prev_ = items[i + 1] if i + 1 < len(items) else None
+            next_ = items[i - 1] if i > 0 else None
+            nav = ""
+            if next_: nav += f'<tr><th style="text-align:left;width:90px">다음글</th><td style="text-align:left"><a href="{next_["id"]}.html">{_html.escape(next_["title"])}</a></td></tr>'
+            if prev_: nav += f'<tr><th style="text-align:left">이전글</th><td style="text-align:left"><a href="{prev_["id"]}.html">{_html.escape(prev_["title"])}</a></td></tr>'
+            atts = ""
+            if p["atts"]:
+                atts = '<div class="attach box"><b>첨부파일</b><ul class="bul">' + "".join(
+                    f'<li><a href="../../{a["file"]}" download>&#128206; {_html.escape(a["name"])}</a> <span class="note">({a["size"]//1024:,} KB)</span>'
+                    + (f' · <a href="#att{k}" style="color:var(--primary)">본문 보기 ▼</a>' if a.get("text") else ' <span class="note">(스캔 문서: 텍스트 없음, 파일로 확인)</span>') + "</li>"
+                    for k, a in enumerate(p["atts"])) + "</ul></div>"
+            att_text = "".join(
+                f'<section class="att-text" id="att{k}"><h4 class="rule-title" style="font-size:19px">&#128196; {_html.escape(a["name"])} <a href="../../{a["file"]}" download class="btn sm line" style="margin-left:8px">파일 내려받기</a></h4>'
+                + "".join(f"<p>{_html.escape(line)}</p>" for line in a["text"].split("\n") if line.strip()) + "</section>"
+                for k, a in enumerate(p["atts"]) if a.get("text"))
+            kw = _json.dumps(p.get("keywords") or {}, ensure_ascii=False)
+            body = f"""
+<article class="post">
+  <div class="post-head" style="border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px">
+    <span class="badge" style="font-size:12px;color:#fff;background:var(--primary);padding:2px 8px;border-radius:4px">{p["sub"]}</span>
+    <h4 style="border:0;padding:0;margin:8px 0 6px;color:#222;font-size:24px">{_html.escape(p["title"])}</h4>
+    <div class="note">작성자 {_html.escape(p["author"])}{(" (" + p["dept"] + ")") if p.get("dept") else ""} &nbsp;|&nbsp; 게시일 {p["date"]} &nbsp;|&nbsp; 출처 경기연구원 그룹웨어</div>
+  </div>
+  <script type="application/json" class="kw-data">{kw}</script>
+  <div class="post-body minutes gw-body" style="line-height:1.9">
+    {p["body_html"] or '<p class="note">본문 없이 첨부파일만 게시된 글입니다.</p>'}
+    {atts}
+    {att_text}
+  </div>
+  <table class="tbl" style="margin-top:24px">{nav}</table>
+  <div class="board-bottom" style="justify-content:space-between"><a href="../{code}.html" class="btn line">목록</a></div>
+</article>"""
+            write(f"{GW_DIR[code]}/{p['id']}.html", simple_page(f'{p["title"]} — {GW_NAME[code]}', body, wide=True, root="../../", visual=GW_NAME[code]))
+            n += 1
+    return n
+
 def p_staff(root):
     intro = '<p>노동조합 운영진(집행부·대의원)이 운영 사항을 공유하는 게시판입니다. 승인된 조합원만 열람할 수 있으며 글쓰기는 관리자(운영진)만 가능합니다.</p>'
     return board(root, "운영진 게시판", None, intro, code="staff")
@@ -464,6 +522,7 @@ def audit_pages():
     <h4 style="border:0;padding:0;margin:8px 0 6px;color:#222;font-size:24px">{r["title"]}</h4>
     <div class="note">{r["audit"]} &nbsp;|&nbsp; 회의일 {r["date"]} &nbsp;|&nbsp; 출처 경기도의회 회의록시스템</div>
   </div>
+  <script type="application/json" class="kw-data">{__import__("json").dumps(r.get("keywords") or {}, ensure_ascii=False)}</script>
   <div class="post-body minutes" style="line-height:1.85;font-size:15px">{r["body"] or "<p class='note'>본문은 원문 링크에서 확인하세요.</p>"}</div>
   <table class="tbl" style="margin-top:24px">{nav}</table>
   <div class="board-bottom" style="justify-content:space-between"><a href="../audit.html" class="btn line">목록</a><a href="{r["url"]}" target="_blank" rel="noopener" class="btn">경기도의회 원문 보기</a></div>
@@ -586,7 +645,7 @@ PAGES = {
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("gri", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
-    ("community", "staff"): p_staff, ("archive", "director"): p_director, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
+    ("community", "staff"): p_staff, ("gri", "director"): p_director, ("gri", "committee"): p_committee, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
 }
 
 # ------------------------------------------------------------------ 메인 페이지
@@ -868,6 +927,7 @@ def main():
     write("board/search.html", simple_page("자료검색", SEARCH, wide=True))
     n += audit_pages()
     n += regulations_pages()
+    n += gw_pages()
     write("admin/index.html", simple_page("관리자", ADMIN, wide=True))
     write("admin/members.html", simple_page("회원관리", ADMIN_MEMBERS, wide=True))
     write("admin/events.html", simple_page("일정관리", ADMIN_EVENTS, wide=True))

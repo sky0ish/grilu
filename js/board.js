@@ -16,14 +16,14 @@
   function boardName(code) {
     var m = { notice: '공지사항', news: '노조소식', statement: '성명서·보도자료', othernews: '기타 노조 소식', regulation: '규정 및 지침', council: '노사협의회',
       documents: '기타참고자료', agreement: '단체협약', law: '노동관계법령', rules: '규약·규정',
-      board: '조합원 자유게시판', staff: '운영진 게시판', delegate: '대의원 회의자료', director: '노동이사 활동보고', wish: '노조에 바란다', audit: '행정사무감사', photo: '사진자료', video: '동영상' };
+      board: '조합원 자유게시판', staff: '운영진 게시판', delegate: '대의원 회의자료', director: '노동이사 활동보고', committee: '심의위원회', wish: '노조에 바란다', audit: '행정사무감사', photo: '사진자료', video: '동영상' };
     return m[code] || code;
   }
   function boardSection(code) {
     if (['notice', 'news', 'statement', 'newsletter', 'othernews'].indexOf(code) >= 0) return 'news';
-    if (['documents', 'agreement', 'law', 'photo', 'video', 'council', 'delegate', 'rules', 'director'].indexOf(code) >= 0) return 'archive';
+    if (['documents', 'agreement', 'law', 'photo', 'video', 'council', 'delegate', 'rules'].indexOf(code) >= 0) return 'archive';
     if (code === 'welfare' || code === 'join') return 'about';
-    if (['audit', 'regulation'].indexOf(code) >= 0) return 'gri';
+    if (['audit', 'regulation', 'director', 'committee'].indexOf(code) >= 0) return 'gri';
     return 'community';
   }
   function listUrl(code) { return DB.root + boardSection(code) + '/' + code + '.html'; }
@@ -241,8 +241,8 @@
   function loadFullText(p) {
     var a = p.attachments || {};
     var legacy = a.legacy_id || '';
-    if (legacy.indexOf('audit-') !== 0) return;
-    var url = DB.root + 'gri/audit/' + legacy.slice(6) + '.html';
+    var url = a.page ? DB.root + a.page : (legacy.indexOf('audit-') === 0 ? DB.root + 'gri/audit/' + legacy.slice(6) + '.html' : '');
+    if (!url) return;
     var body = document.querySelector('#postView .post-body');
     if (!body) return;
     var note = document.createElement('p'); note.className = 'note'; note.textContent = '회의록 전문을 불러오는 중...'; body.appendChild(note);
@@ -250,13 +250,18 @@
       var doc = new DOMParser().parseFromString(html, 'text/html');
       var full = doc.querySelector('.post-body.minutes');
       if (!full) throw new Error('no body');
+      var kwEl = doc.querySelector('script.kw-data'); var pre = null;
+      try { pre = kwEl ? JSON.parse(kwEl.textContent) : null; } catch (e) {}
+      // 정적 페이지의 상대 링크(첨부파일 등)를 현재 위치 기준으로 보정
+      var base = url.replace(/[^/]*$/, '');
+      full.querySelectorAll('a[href]').forEach(function (x) { var h = x.getAttribute('href'); if (h && !/^(https?:|#|javascript:)/.test(h)) x.setAttribute('href', base + h); });
       var head = body.querySelector('.box');
       body.innerHTML = '';
       if (head) body.appendChild(head);
       var wrap = document.createElement('div'); wrap.className = 'minutes'; wrap.style.cssText = 'line-height:1.85;font-size:15px';
       wrap.innerHTML = full.innerHTML;
       body.appendChild(wrap);
-      renderKeywords(body, wrap);
+      renderKeywords(body, wrap, pre);
     }).catch(function () { note.textContent = '전문을 불러오지 못했습니다. 위 링크에서 확인하세요.'; });
   }
 
@@ -294,15 +299,23 @@
       .map(function (x) { return [x[0], text.split(x[0]).length - 1]; })   // 본문 실제 등장 횟수
       .sort(function (a, b) { return b[1] - a[1] || a[0].localeCompare(b[0]); }).slice(0, limit || 20);
   }
-  function renderKeywords(body, textWrap) {
+  function kwChip(x) { var cls = x[2] > 0 ? ' pos' : x[2] < 0 ? ' neg' : ''; return '<a href="#" class="kw' + cls + '" data-kw="' + esc(x[0]) + '">' + esc(x[0]) + ' <b>' + x[1] + '</b></a>'; }
+  function renderKeywords(body, textWrap, pre) {
     var text = textWrap.textContent;
-    if (text.length < 1500) return;
-    var top = kwStats(textWrap, text, 20);
+    if (!pre) {
+      var kwEl = document.querySelector('script.kw-data');
+      try { pre = kwEl ? JSON.parse(kwEl.textContent) : null; } catch (e) {}
+    }
+    var top, pos = [], neg = [];
+    if (pre && pre.top && pre.top.length) { top = pre.top; pos = pre.pos || []; neg = pre.neg || []; }
+    else { if (text.length < 1500) return; top = kwStats(textWrap, text, 20).map(function (x) { return [x[0], x[1], 0]; }); }
     if (!top.length) return;
     var old = document.querySelector('.kw-stats'); if (old) old.remove();
     var bar = document.createElement('div'); bar.className = 'kw-stats';
-    bar.innerHTML = '<div class="kw-title">&#128202; 많이 나온 키워드 <span class="note">(누르면 본문에서 해당 위치로 이동)</span></div>' +
-      top.map(function (x) { return '<a href="#" class="kw" data-kw="' + esc(x[0]) + '">' + esc(x[0]) + ' <b>' + x[1] + '</b></a>'; }).join('');
+    bar.innerHTML = '<div class="kw-title">&#128202; 많이 나온 키워드 <span class="note">(명사만 집계 · 누르면 본문에서 해당 위치로 이동 · <span class="kw-legend pos">긍정어</span> <span class="kw-legend neg">부정어</span>)</span></div>' +
+      top.map(kwChip).join('') +
+      (pos.length ? '<div class="kw-row"><span class="kw-label pos">긍정</span>' + pos.map(kwChip).join('') + '</div>' : '') +
+      (neg.length ? '<div class="kw-row"><span class="kw-label neg">부정</span>' + neg.map(kwChip).join('') + '</div>' : '');
     body.parentNode.insertBefore(bar, body);
     var orig = textWrap.innerHTML, cur = { kw: '', i: -1 };
     bar.addEventListener('click', function (e) {
