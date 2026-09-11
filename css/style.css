@@ -15,7 +15,7 @@
   --line:#e3e6ee;
   --bg-soft:#f4f6fb;
   --white:#fff;
-  --wrap:1200px;
+  --wrap:1440px;      /* 좌우 여백 축소 (기존 1200) */
   --radius:10px;
   --shadow:0 6px 24px rgba(20,42,110,.08);
   --font:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
