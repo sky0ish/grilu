@@ -250,7 +250,21 @@
     };
   }
 
+  // 예시 게시글 보기 (Supabase 연결 전)
+  function renderDemo() {
+    var box = document.getElementById('postView');
+    if (!box || DB.qs('demo') !== '1') return false;
+    var t = DB.qs('t') || '예시 게시글', d = DB.qs('d') || '', w = DB.qs('w') || '노동조합';
+    box.innerHTML = '<div class="post-head"><h4 style="border:0;padding:0;margin:0 0 8px;color:#222;font-size:24px">' + esc(t) + '</h4>' +
+      '<div class="note">' + esc(w) + ' &nbsp;|&nbsp; ' + esc(d) + '</div></div>' +
+      '<div class="post-body box" style="line-height:1.9"><p><b>이 글은 홈페이지 구성 확인용 예시 게시글입니다.</b></p>' +
+      '<p>실제 게시글은 Supabase 연결(js/config.js) 후 관리자가 로그인하여 각 게시판의 <b>글쓰기</b> 버튼으로 등록하면 이 자리에 본문·첨부파일이 표시됩니다.</p></div>' +
+      '<div class="board-bottom" style="justify-content:space-between"><a href="javascript:history.back()" class="btn line">목록</a></div>';
+    return true;
+  }
+
   document.addEventListener('db:ready', function () {
+    if (renderDemo()) return;
     if (!DB.ready) return;   // 정적 모드
     renderList(); renderView(); renderWrite(); renderLatest(); renderGallery(); bindCounsel();
   });

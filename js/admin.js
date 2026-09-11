@@ -1,5 +1,6 @@
 /* ============================================================
-   관리자 페이지: 회원 승인, 일정 관리, 고충상담 열람
+   관리자 페이지: 대시보드 / 회원관리 / 일정관리 / 고충상담
+   (페이지 구분: #adminPage[data-admin="index|members|events|counsel"])
    ============================================================ */
 (function () {
   var DB = window.DB;
@@ -8,44 +9,130 @@
   var typeName = { union: '노조', council: '노사협의회', event: '행사', holiday: '휴일' };
 
   document.addEventListener('db:ready', function () {
-    if (!document.getElementById('adminPage')) return;
+    var page = document.getElementById('adminPage');
+    if (!page) return;
     if (!DB.requireLogin()) return;
-    if (!DB.isAdmin()) { document.getElementById('adminPage').innerHTML = '<p style="color:#c33">관리자만 접근할 수 있습니다.</p>'; return; }
-    loadMembers(); loadEvents(); loadCounsel();
-    document.getElementById('eventForm').onsubmit = saveEvent;
+    if (!DB.isAdmin()) { page.innerHTML = '<p style="color:#c33;padding:40px 0">관리자만 접근할 수 있습니다.</p>'; return; }
+    var kind = page.getAttribute('data-admin');
+    if (kind === 'index') loadDashboard();
+    if (kind === 'members') initMembers();
+    if (kind === 'events') { loadEvents(); document.getElementById('eventForm').onsubmit = saveEvent; }
+    if (kind === 'counsel') loadCounsel();
   });
 
-  // ---------- 회원 ----------
+  function statusBadge(p) {
+    if (p.role === 'admin') return '<span class="st-badge admin">관리자</span>';
+    return p.approved ? '<span class="st-badge ok">승인</span>' : '<span class="st-badge wait">대기</span>';
+  }
+
+  // ---------- 대시보드 ----------
+  function loadDashboard() {
+    var set = function (k, v) { var el = document.querySelector('[data-stat="' + k + '"]'); if (el) el.textContent = v; };
+    DB.client.from('profiles').select('*').order('created_at', { ascending: false }).then(function (r) {
+      if (r.error) return;
+      set('members', r.data.length + '명');
+      set('pending', r.data.filter(function (p) { return !p.approved && p.role !== 'admin'; }).length + '명');
+      var tb = document.querySelector('#recentMembers tbody');
+      tb.innerHTML = r.data.slice(0, 8).map(function (p) {
+        return '<tr><td>' + esc(p.name || '-') + '</td><td>' + esc(p.email) + '</td><td>' + esc(p.dept || '-') + '</td><td>' + fmt(p.created_at) + '</td><td>' + statusBadge(p) + '</td></tr>';
+      }).join('') || '<tr><td colspan="5">회원이 없습니다.</td></tr>';
+    });
+    var now = new Date(), p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+    var from = now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-01';
+    var to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    DB.client.from('events').select('id', { count: 'exact', head: true }).gte('date', from).lte('date', fmt(to)).then(function (r) { set('events', (r.count || 0) + '건'); });
+    DB.client.from('counsel').select('id', { count: 'exact', head: true }).neq('status', 'done').then(function (r) { set('counsel', (r.count || 0) + '건'); });
+  }
+
+  // ---------- 회원관리 ----------
+  var members = [];
+  function initMembers() {
+    var q = new URLSearchParams(location.search);
+    var filter = document.getElementById('memberFilter');
+    if (q.get('filter')) filter.value = q.get('filter');
+    document.getElementById('memberSearch').addEventListener('input', renderMembers);
+    filter.addEventListener('change', renderMembers);
+    document.getElementById('memberCsv').addEventListener('click', exportCsv);
+    loadMembers();
+  }
   function loadMembers() {
     DB.client.from('profiles').select('*').order('created_at', { ascending: false }).then(function (r) {
       var tb = document.querySelector('#memberTbl tbody');
       if (r.error) { tb.innerHTML = '<tr><td colspan="6">' + esc(r.error.message) + '</td></tr>'; return; }
-      tb.innerHTML = r.data.map(function (p) {
-        return '<tr><td>' + esc(p.name || '-') + '</td><td>' + esc(p.email) + '</td><td>' + esc(p.dept || '-') + '</td><td>' + fmt(p.created_at) + '</td>' +
-          '<td>' + (p.role === 'admin' ? '<b style="color:var(--gri-orange)">관리자</b>' : (p.approved ? '승인' : '<span style="color:#c33">대기</span>')) + '</td>' +
-          '<td>' + (p.role === 'admin' ? '' :
-            '<button class="btn" data-act="' + (p.approved ? 'revoke' : 'approve') + '" data-id="' + p.id + '" style="padding:4px 10px;font-size:12px">' + (p.approved ? '승인취소' : '승인') + '</button> ' +
-            '<button class="btn line" data-act="admin" data-id="' + p.id + '" style="padding:4px 10px;font-size:12px">관리자 지정</button>') + '</td></tr>';
-      }).join('') || '<tr><td colspan="6">회원이 없습니다.</td></tr>';
-      tb.querySelectorAll('button').forEach(function (b) {
-        b.onclick = function () {
-          var act = b.getAttribute('data-act'), id = b.getAttribute('data-id');
-          var patch = act === 'approve' ? { approved: true } : act === 'revoke' ? { approved: false } : { role: 'admin', approved: true };
-          if (act === 'admin' && !confirm('이 회원을 관리자로 지정할까요?')) return;
-          DB.client.from('profiles').update(patch).eq('id', id).then(function (r2) { if (r2.error) alert(r2.error.message); loadMembers(); });
-        };
-      });
+      members = r.data; renderMembers();
     });
+  }
+  function filtered() {
+    var kw = (document.getElementById('memberSearch').value || '').trim().toLowerCase();
+    var f = document.getElementById('memberFilter').value;
+    return members.filter(function (p) {
+      if (f === 'pending' && (p.approved || p.role === 'admin')) return false;
+      if (f === 'approved' && !(p.approved && p.role !== 'admin')) return false;
+      if (f === 'admin' && p.role !== 'admin') return false;
+      if (kw && ((p.name || '') + ' ' + (p.email || '') + ' ' + (p.dept || '')).toLowerCase().indexOf(kw) < 0) return false;
+      return true;
+    });
+  }
+  function renderMembers() {
+    var tb = document.querySelector('#memberTbl tbody');
+    var list = filtered();
+    document.getElementById('memberCount').textContent = list.length + '명 / 전체 ' + members.length + '명';
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="6" style="padding:30px;color:#888">해당하는 회원이 없습니다.</td></tr>'; return; }
+    var me = DB.user.id;
+    tb.innerHTML = list.map(function (p) {
+      var self = p.id === me;
+      return '<tr data-id="' + p.id + '">' +
+        '<td><input class="inline" data-f="name" value="' + esc(p.name || '') + '"></td>' +
+        '<td style="text-align:left">' + esc(p.email) + (self ? ' <span class="note">(나)</span>' : '') + '</td>' +
+        '<td><input class="inline" data-f="dept" value="' + esc(p.dept || '') + '"></td>' +
+        '<td>' + fmt(p.created_at) + '</td><td>' + statusBadge(p) + '</td>' +
+        '<td><button class="btn sm" data-act="save">저장</button> ' +
+        (self ? '' :
+          (p.role === 'admin'
+            ? '<button class="btn sm line" data-act="unadmin">관리자 해제</button> '
+            : '<button class="btn sm ' + (p.approved ? 'line' : '') + '" data-act="' + (p.approved ? 'revoke' : 'approve') + '">' + (p.approved ? '승인취소' : '승인') + '</button> ' +
+              '<button class="btn sm line" data-act="admin">관리자 지정</button> ') +
+          '<button class="btn sm danger" data-act="delete">탈퇴</button>') +
+        '</td></tr>';
+    }).join('');
+    tb.querySelectorAll('button').forEach(function (b) {
+      b.onclick = function () {
+        var tr = b.closest('tr'), id = tr.getAttribute('data-id'), act = b.getAttribute('data-act');
+        var p = members.filter(function (x) { return x.id === id; })[0];
+        var done = function (r) { if (r && r.error) alert('실패: ' + r.error.message); loadMembers(); };
+        if (act === 'save') {
+          var patch = { name: tr.querySelector('[data-f=name]').value.trim(), dept: tr.querySelector('[data-f=dept]').value.trim() };
+          return DB.client.from('profiles').update(patch).eq('id', id).then(function (r) { if (r.error) alert(r.error.message); else { b.textContent = '저장됨'; setTimeout(function () { b.textContent = '저장'; }, 1200); p.name = patch.name; p.dept = patch.dept; } });
+        }
+        if (act === 'approve') return DB.client.from('profiles').update({ approved: true }).eq('id', id).then(done);
+        if (act === 'revoke') { if (!confirm(p.email + ' 회원의 승인을 취소할까요?')) return; return DB.client.from('profiles').update({ approved: false }).eq('id', id).then(done); }
+        if (act === 'admin') { if (!confirm(p.email + ' 회원을 관리자로 지정할까요?')) return; return DB.client.from('profiles').update({ role: 'admin', approved: true }).eq('id', id).then(done); }
+        if (act === 'unadmin') { if (!confirm('관리자 권한을 해제할까요? (승인 조합원으로 남습니다)')) return; return DB.client.from('profiles').update({ role: 'member' }).eq('id', id).then(done); }
+        if (act === 'delete') {
+          if (!confirm(p.email + ' 회원을 탈퇴 처리할까요?\n홈페이지 회원 정보가 삭제되고 조합원 권한이 사라집니다.')) return;
+          return DB.client.from('profiles').delete().eq('id', id).then(done);
+        }
+      };
+    });
+  }
+  function exportCsv() {
+    var rows = [['성명', '이메일', '소속', '상태', '가입일']].concat(filtered().map(function (p) {
+      return [p.name || '', p.email || '', p.dept || '', p.role === 'admin' ? '관리자' : (p.approved ? '승인' : '대기'), fmt(p.created_at)];
+    }));
+    var csv = '﻿' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = '회원목록_' + fmt(new Date()) + '.csv'; a.click();
   }
 
   // ---------- 일정 ----------
   function loadEvents() {
-    DB.client.from('events').select('*').order('date', { ascending: false }).limit(100).then(function (r) {
+    DB.client.from('events').select('*').order('date', { ascending: false }).limit(200).then(function (r) {
       var tb = document.querySelector('#eventTbl tbody');
       if (r.error) { tb.innerHTML = '<tr><td colspan="5">' + esc(r.error.message) + '</td></tr>'; return; }
       tb.innerHTML = r.data.map(function (e) {
         return '<tr><td>' + e.date + (e.end_date ? ' ~ ' + e.end_date : '') + '</td><td class="tit">' + esc(e.title) + '</td><td>' + typeName[e.type] + '</td><td class="tit">' + esc(e.description || '') + '</td>' +
-          '<td><button class="btn line" data-edit="' + e.id + '" style="padding:4px 10px;font-size:12px">수정</button> <button class="btn" data-del="' + e.id + '" style="padding:4px 10px;font-size:12px;background:#c33">삭제</button></td></tr>';
+          '<td><button class="btn sm line" data-edit="' + e.id + '">수정</button> <button class="btn sm danger" data-del="' + e.id + '">삭제</button></td></tr>';
       }).join('') || '<tr><td colspan="5">등록된 일정이 없습니다.</td></tr>';
       tb.querySelectorAll('[data-del]').forEach(function (b) {
         b.onclick = function () { if (!confirm('삭제할까요?')) return; DB.client.from('events').delete().eq('id', b.getAttribute('data-del')).then(loadEvents); };
@@ -73,11 +160,11 @@
   function loadCounsel() {
     DB.client.from('counsel').select('*').order('created_at', { ascending: false }).then(function (r) {
       var tb = document.querySelector('#counselTbl tbody');
-      if (r.error) { tb.innerHTML = '<tr><td colspan="6">' + esc(r.error.message) + '</td></tr>'; return; }
-      var stName = { received: '접수', processing: '처리중', done: '완료' };
+      if (r.error) { tb.innerHTML = '<tr><td colspan="5">' + esc(r.error.message) + '</td></tr>'; return; }
       tb.innerHTML = r.data.map(function (c) {
+        var opt = function (v, n) { return '<option value="' + v + '"' + (c.status === v ? ' selected' : '') + '>' + n + '</option>'; };
         return '<tr><td>' + fmt(c.created_at) + '</td><td>' + esc(c.category || '') + '</td><td class="tit"><a href="#" data-view="' + c.id + '">' + esc(c.title) + '</a></td><td>' + esc(c.name || '익명') + '<br><span class="note">' + esc(c.contact || '') + '</span></td>' +
-          '<td><select data-st="' + c.id + '" style="padding:4px"><option value="received"' + (c.status === 'received' ? ' selected' : '') + '>접수</option><option value="processing"' + (c.status === 'processing' ? ' selected' : '') + '>처리중</option><option value="done"' + (c.status === 'done' ? ' selected' : '') + '>완료</option></select></td></tr>' +
+          '<td><select data-st="' + c.id + '" style="padding:4px">' + opt('received', '접수') + opt('processing', '처리중') + opt('done', '완료') + '</select></td></tr>' +
           '<tr id="c' + c.id + '" hidden><td colspan="5" style="text-align:left;background:#fafbfd;white-space:pre-wrap">' + esc(c.content) + '</td></tr>';
       }).join('') || '<tr><td colspan="5">접수된 상담이 없습니다.</td></tr>';
       tb.querySelectorAll('[data-view]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var row = document.getElementById('c' + a.getAttribute('data-view')); row.hidden = !row.hidden; }; });

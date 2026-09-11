@@ -44,26 +44,16 @@
 
 <section class="sub-visual"><div class="wrap"><h2>관리자</h2></div></section>
 <div class="wrap" style="padding:50px 0 80px;"><main class="content"><h3 class="page-title">관리자</h3>
-<div id="adminPage">
-<h4>회원 관리</h4>
-<p class="note">가입한 회원이 조합원인지 확인한 뒤 <b>승인</b>하면 조합원 게시판 이용과 글쓰기가 가능해집니다.</p>
-<div style="overflow-x:auto"><table class="tbl" id="memberTbl"><thead><tr><th>성명</th><th>이메일</th><th>소속</th><th>가입일</th><th>상태</th><th>관리</th></tr></thead><tbody><tr><td colspan="6">불러오는 중...</td></tr></tbody></table></div>
-
-<h4>일정 관리</h4>
-<form id="eventForm" class="box" style="display:grid;grid-template-columns:150px 150px 1fr 130px;gap:8px;align-items:end">
-  <input type="hidden" name="id_">
-  <label>시작일<input type="date" name="date" required style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
-  <label>종료일(선택)<input type="date" name="end_date" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
-  <label>제목<input type="text" name="title" required style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
-  <label>구분<select name="type" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"><option value="union">노조</option><option value="council">노사협의회</option><option value="event">행사</option><option value="holiday">휴일</option></select></label>
-  <label style="grid-column:1/4">설명(선택)<input type="text" name="description" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
-  <button type="submit" class="btn">일정 저장</button>
-</form>
-<div style="overflow-x:auto"><table class="tbl" id="eventTbl"><thead><tr><th>날짜</th><th>제목</th><th>구분</th><th>설명</th><th>관리</th></tr></thead><tbody><tr><td colspan="5">불러오는 중...</td></tr></tbody></table></div>
-
-<h4>고충상담 접수함</h4>
-<p class="note">제목을 누르면 내용이 펼쳐집니다. 상담 내용은 관리자만 볼 수 있습니다.</p>
-<div style="overflow-x:auto"><table class="tbl" id="counselTbl"><thead><tr><th>접수일</th><th>분야</th><th>제목</th><th>신청자</th><th>상태</th></tr></thead><tbody><tr><td colspan="5">불러오는 중...</td></tr></tbody></table></div>
+<div id="adminPage" data-admin="index">
+<div class="admin-nav"><a href="index.html" class="on">대시보드</a><a href="members.html">회원관리</a><a href="events.html">일정관리</a><a href="counsel.html">고충상담</a></div>
+<div class="glance" id="adminStats">
+  <div class="item"><small>전체 회원</small><b data-stat="members">-</b><p>가입 회원 수</p></div>
+  <div class="item"><small>승인 대기</small><b data-stat="pending">-</b><p><a href="members.html?filter=pending" style="color:var(--primary)">회원관리에서 승인 →</a></p></div>
+  <div class="item"><small>이달의 일정</small><b data-stat="events">-</b><p>등록된 일정</p></div>
+  <div class="item"><small>미처리 고충상담</small><b data-stat="counsel">-</b><p>접수 상태</p></div>
+</div>
+<h4>최근 가입 회원</h4>
+<div style="overflow-x:auto"><table class="tbl" id="recentMembers"><thead><tr><th>성명</th><th>이메일</th><th>소속</th><th>가입일</th><th>상태</th></tr></thead><tbody><tr><td colspan="5">불러오는 중...</td></tr></tbody></table></div>
 </div>
 </main></div>
 

@@ -156,12 +156,16 @@ def sub_page(sec, page):
 """ + footer(root)
 
 # ------------------------------------------------------------------ 게시판 공통
-def rows_html(rows):
+def demo_href(root, title, date, writer="노동조합"):
+    from urllib.parse import quote
+    return f"{root}board/view.html?demo=1&t={quote(title)}&d={date}&w={quote(writer)}"
+
+def rows_html(rows, root="../"):
     out = []
     for i, r in enumerate(rows):
         num, title, writer, date, hit = r
         badge = ' <span class="badge new" style="font-size:11px;color:#fff;background:#e5533c;padding:1px 6px;border-radius:3px">N</span>' if i < 2 else ""
-        out.append(f'<tr><td class="num">{num}</td><td class="tit"><a href="#">{title}</a>{badge}</td><td class="writer">{writer}</td><td class="date">{date}</td><td class="hit">{hit}</td></tr>')
+        out.append(f'<tr><td class="num">{num}</td><td class="tit"><a href="{demo_href(root, title, date, writer)}">{title}</a>{badge}</td><td class="writer">{writer}</td><td class="date">{date}</td><td class="hit">{hit}</td></tr>')
     return "".join(out)
 
 def board(root, name, rows=None, intro="", extra_btn="", code=""):
@@ -174,7 +178,7 @@ def board(root, name, rows=None, intro="", extra_btn="", code=""):
 </div>
 <table class="tbl" data-board="{code}">
   <thead><tr><th class="num">번호</th><th>제목</th><th class="writer">작성자</th><th class="date">작성일</th><th class="hit">조회</th></tr></thead>
-  <tbody>{rows_html(rows)}</tbody>
+  <tbody>{rows_html(rows, root)}</tbody>
 </table>
 <div class="paging"><a href="#">&laquo;</a><a href="#" class="on">1</a><a href="#">2</a><a href="#">3</a><a href="#">&raquo;</a></div>
 <div class="board-bottom">{extra_btn}<a href="#" class="btn">글쓰기</a></div>
@@ -435,7 +439,7 @@ def index():
         out = ""
         for i, (t, d) in enumerate(items):
             b = f'<span class="badge {badge[1]}">{badge[0]}</span>' if badge else (f'<span class="badge new">N</span>' if i < 2 else "")
-            out += f'<li>{b}<a href="#">{t}</a><span class="date">{d}</span></li>'
+            out += f'<li>{b}<a href="{demo_href(root, t, d)}">{t}</a><span class="date">{d}</span></li>'
         return out
     notice = [("2026년 3분기 노사협의회 안건 접수 안내", "2026-09-08"), ("추석 명절 조합원 선물 지급 안내", "2026-09-04"),
               ("제○기 집행부 하반기 조합원 간담회 일정", "2026-08-28"), ("2026년 상반기 조합비 사용내역 공개", "2026-08-11"),
@@ -607,30 +611,64 @@ WRITE = """
 <div class="board-bottom"><a href="javascript:history.back()" class="btn line">취소</a><button type="submit" class="btn">저장</button></div>
 </form>
 """
-ADMIN = """
-<div id="adminPage">
-<h4>회원 관리</h4>
-<p class="note">가입한 회원이 조합원인지 확인한 뒤 <b>승인</b>하면 조합원 게시판 이용과 글쓰기가 가능해집니다.</p>
-<div style="overflow-x:auto"><table class="tbl" id="memberTbl"><thead><tr><th>성명</th><th>이메일</th><th>소속</th><th>가입일</th><th>상태</th><th>관리</th></tr></thead><tbody><tr><td colspan="6">불러오는 중...</td></tr></tbody></table></div>
+def admin_nav(cur):
+    items=[("index","대시보드"),("members","회원관리"),("events","일정관리"),("counsel","고충상담")]
+    return '<div class="admin-nav">'+"".join(f'<a href="{p}.html"{" class=\"on\"" if p==cur else ""}>{n}</a>' for p,n in items)+'</div>'
 
-<h4>일정 관리</h4>
+ADMIN = """
+<div id="adminPage" data-admin="index">
+%s
+<div class="glance" id="adminStats">
+  <div class="item"><small>전체 회원</small><b data-stat="members">-</b><p>가입 회원 수</p></div>
+  <div class="item"><small>승인 대기</small><b data-stat="pending">-</b><p><a href="members.html?filter=pending" style="color:var(--primary)">회원관리에서 승인 →</a></p></div>
+  <div class="item"><small>이달의 일정</small><b data-stat="events">-</b><p>등록된 일정</p></div>
+  <div class="item"><small>미처리 고충상담</small><b data-stat="counsel">-</b><p>접수 상태</p></div>
+</div>
+<h4>최근 가입 회원</h4>
+<div style="overflow-x:auto"><table class="tbl" id="recentMembers"><thead><tr><th>성명</th><th>이메일</th><th>소속</th><th>가입일</th><th>상태</th></tr></thead><tbody><tr><td colspan="5">불러오는 중...</td></tr></tbody></table></div>
+</div>
+""" % admin_nav("index")
+
+ADMIN_MEMBERS = """
+<div id="adminPage" data-admin="members">
+%s
+<p class="note">가입한 회원이 조합원인지 확인한 뒤 <b>승인</b>하면 조합원 게시판 이용과 글쓰기가 가능해집니다. 성명·소속은 칸을 눌러 바로 수정하고 <b>저장</b>을 누르세요.</p>
+<div class="admin-tools">
+  <input type="search" id="memberSearch" placeholder="성명 · 이메일 · 소속 검색">
+  <select id="memberFilter"><option value="all">전체</option><option value="pending">승인 대기</option><option value="approved">승인 조합원</option><option value="admin">관리자</option></select>
+  <button class="btn line" id="memberCsv" type="button">CSV 내려받기</button>
+  <span class="cnt" id="memberCount"></span>
+</div>
+<div style="overflow-x:auto"><table class="tbl" id="memberTbl"><thead><tr><th style="width:120px">성명</th><th>이메일</th><th style="width:160px">소속</th><th style="width:100px">가입일</th><th style="width:90px">상태</th><th style="width:250px">관리</th></tr></thead><tbody><tr><td colspan="6">불러오는 중...</td></tr></tbody></table></div>
+<p class="note" style="margin-top:12px">※ "탈퇴"는 홈페이지 회원 정보를 삭제하고 로그인 권한을 없앱니다. 로그인 계정 자체를 완전히 삭제하려면 Supabase 대시보드 &gt; Authentication &gt; Users 에서 삭제하세요.</p>
+</div>
+""" % admin_nav("members")
+
+ADMIN_EVENTS = """
+<div id="adminPage" data-admin="events">
+%s
 <form id="eventForm" class="box" style="display:grid;grid-template-columns:150px 150px 1fr 130px;gap:8px;align-items:end">
   <input type="hidden" name="id_">
-  <label>시작일<input type="date" name="date" required style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
-  <label>종료일(선택)<input type="date" name="end_date" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
-  <label>제목<input type="text" name="title" required style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
-  <label>구분<select name="type" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"><option value="union">노조</option><option value="council">노사협의회</option><option value="event">행사</option><option value="holiday">휴일</option></select></label>
-  <label style="grid-column:1/4">설명(선택)<input type="text" name="description" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
+  <label>시작일<input type="date" name="date" required style="width:100%%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
+  <label>종료일(선택)<input type="date" name="end_date" style="width:100%%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
+  <label>제목<input type="text" name="title" required style="width:100%%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
+  <label>구분<select name="type" style="width:100%%;padding:8px;border:1px solid var(--line);border-radius:4px"><option value="union">노조</option><option value="council">노사협의회</option><option value="event">행사</option><option value="holiday">휴일</option></select></label>
+  <label style="grid-column:1/4">설명(선택)<input type="text" name="description" style="width:100%%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
   <button type="submit" class="btn">일정 저장</button>
 </form>
 <div style="overflow-x:auto"><table class="tbl" id="eventTbl"><thead><tr><th>날짜</th><th>제목</th><th>구분</th><th>설명</th><th>관리</th></tr></thead><tbody><tr><td colspan="5">불러오는 중...</td></tr></tbody></table></div>
+</div>
+""" % admin_nav("events")
 
-<h4>고충상담 접수함</h4>
+ADMIN_COUNSEL = """
+<div id="adminPage" data-admin="counsel">
+%s
 <p class="note">제목을 누르면 내용이 펼쳐집니다. 상담 내용은 관리자만 볼 수 있습니다.</p>
 <div style="overflow-x:auto"><table class="tbl" id="counselTbl"><thead><tr><th>접수일</th><th>분야</th><th>제목</th><th>신청자</th><th>상태</th></tr></thead><tbody><tr><td colspan="5">불러오는 중...</td></tr></tbody></table></div>
 </div>
-"""
-PRIVACY = "<p>경기연구원 노동조합(이하 '조합')은 개인정보보호법에 따라 이용자의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 다음과 같이 개인정보처리방침을 수립·공개합니다.</p><h4>1. 개인정보의 처리 목적</h4><p>홈페이지 회원 관리, 고충상담 접수 및 회신, 조합 소식 안내</p><h4>2. 처리하는 개인정보 항목</h4><p>성명, 소속, 아이디, 비밀번호, 이메일, 연락처</p><h4>3. 보유 및 이용기간</h4><p>회원 탈퇴 시 또는 수집 목적 달성 시까지</p><p class='note'>※ 예시 문안입니다. 실제 방침으로 교체해 주세요.</p>"
+""" % admin_nav("counsel")
+
+PRIVACY = "<p>경기연구원 노동조합(이하 '조합')은 개인정보보호법에 따라 이용자의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 다음과 같이 개인정보처리방침을 수립·공개합니다.</p><h4>1. 개인정보의 처리 목적</h4><p>홈페이지 회원 관리, 고충상담 접수 및 회신, 조합 소식 안내</p><h4>2. 처리하는 개인정보 항목</h4><p>성명, 소속, 이메일, 비밀번호, 연락처</p><h4>3. 보유 및 이용기간</h4><p>회원 탈퇴 시 또는 수집 목적 달성 시까지</p><p class='note'>※ 예시 문안입니다. 실제 방침으로 교체해 주세요.</p>"
 TERMS = "<p>본 약관은 경기연구원 노동조합 홈페이지(grilu.kr)의 이용 조건 및 절차에 관한 사항을 규정합니다.</p><p class='note'>※ 예시 문안입니다.</p>"
 
 # ------------------------------------------------------------------ 빌드
@@ -654,9 +692,12 @@ def main():
     write("board/view.html", simple_page("게시글", VIEW, wide=True))
     write("board/write.html", simple_page("글쓰기", WRITE, wide=True))
     write("admin/index.html", simple_page("관리자", ADMIN, wide=True))
+    write("admin/members.html", simple_page("회원관리", ADMIN_MEMBERS, wide=True))
+    write("admin/events.html", simple_page("일정관리", ADMIN_EVENTS, wide=True))
+    write("admin/counsel.html", simple_page("고충상담 관리", ADMIN_COUNSEL, wide=True))
     write("etc/privacy.html", simple_page("개인정보처리방침", PRIVACY))
     write("etc/terms.html", simple_page("이용약관", TERMS))
-    print(f"generated {n + 9} pages")
+    print(f"generated {n + 12} pages")
 
 if __name__ == "__main__":
     main()

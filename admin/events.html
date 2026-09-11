@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>개인정보처리방침 | 경기연구원 노동조합</title>
+<title>일정관리 | 경기연구원 노동조합</title>
 <meta name="description" content="경기연구원 노동조합 공식 홈페이지. 공지사항, 규정 및 지침, 노사협의회, 일정, 조합원 소통 공간.">
 <link rel="icon" href="../images/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,8 +42,22 @@
 </header>
 <nav class="gnb"><div class="wrap"><ul><li><a href="../about/greeting.html">조합소개</a><ul class="sub"><li><a href="../about/greeting.html">인사말</a></li><li><a href="../about/officers.html">집행부 소개</a></li><li><a href="../about/history.html">연혁</a></li><li><a href="../about/declaration.html">선언·강령</a></li><li><a href="../about/rules.html">규약·규정</a></li><li><a href="../about/organization.html">조직도</a></li><li><a href="../about/location.html">오시는 길</a></li></ul></li><li><a href="../news/notice.html">소식마당</a><ul class="sub"><li><a href="../news/notice.html">공지사항</a></li><li><a href="../news/news.html">노조소식</a></li><li><a href="../news/statement.html">성명서·보도자료</a></li><li><a href="../news/regulation.html">규정 및 지침</a></li><li><a href="../news/council.html">노사협의회</a></li><li><a href="../news/newsletter.html">노보(소식지)</a></li></ul></li><li><a href="../archive/photo.html">자료마당</a><ul class="sub"><li><a href="../archive/photo.html">사진자료</a></li><li><a href="../archive/video.html">동영상</a></li><li><a href="../archive/agreement.html">단체협약</a></li><li><a href="../archive/law.html">노동관계법령</a></li><li><a href="../archive/documents.html">문서자료</a></li></ul></li><li><a href="../community/calendar.html">소통마당</a><ul class="sub"><li><a href="../community/calendar.html">일정 달력</a></li><li><a href="../community/board.html">조합원 게시판</a></li><li><a href="../community/counsel.html">고충상담</a></li><li><a href="../community/welfare.html">조합원 복지</a></li><li><a href="../community/join.html">조합가입 안내</a></li></ul></li></ul></div></nav>
 
-<section class="sub-visual"><div class="wrap"><h2>개인정보처리방침</h2></div></section>
-<div class="wrap" style="padding:50px 0 80px;max-width:720px"><main class="content"><h3 class="page-title">개인정보처리방침</h3><p>경기연구원 노동조합(이하 '조합')은 개인정보보호법에 따라 이용자의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 다음과 같이 개인정보처리방침을 수립·공개합니다.</p><h4>1. 개인정보의 처리 목적</h4><p>홈페이지 회원 관리, 고충상담 접수 및 회신, 조합 소식 안내</p><h4>2. 처리하는 개인정보 항목</h4><p>성명, 소속, 이메일, 비밀번호, 연락처</p><h4>3. 보유 및 이용기간</h4><p>회원 탈퇴 시 또는 수집 목적 달성 시까지</p><p class='note'>※ 예시 문안입니다. 실제 방침으로 교체해 주세요.</p></main></div>
+<section class="sub-visual"><div class="wrap"><h2>일정관리</h2></div></section>
+<div class="wrap" style="padding:50px 0 80px;"><main class="content"><h3 class="page-title">일정관리</h3>
+<div id="adminPage" data-admin="events">
+<div class="admin-nav"><a href="index.html">대시보드</a><a href="members.html">회원관리</a><a href="events.html" class="on">일정관리</a><a href="counsel.html">고충상담</a></div>
+<form id="eventForm" class="box" style="display:grid;grid-template-columns:150px 150px 1fr 130px;gap:8px;align-items:end">
+  <input type="hidden" name="id_">
+  <label>시작일<input type="date" name="date" required style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
+  <label>종료일(선택)<input type="date" name="end_date" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
+  <label>제목<input type="text" name="title" required style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
+  <label>구분<select name="type" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"><option value="union">노조</option><option value="council">노사협의회</option><option value="event">행사</option><option value="holiday">휴일</option></select></label>
+  <label style="grid-column:1/4">설명(선택)<input type="text" name="description" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:4px"></label>
+  <button type="submit" class="btn">일정 저장</button>
+</form>
+<div style="overflow-x:auto"><table class="tbl" id="eventTbl"><thead><tr><th>날짜</th><th>제목</th><th>구분</th><th>설명</th><th>관리</th></tr></thead><tbody><tr><td colspan="5">불러오는 중...</td></tr></tbody></table></div>
+</div>
+</main></div>
 
 <div class="banners"><div class="wrap"><ul>
   <li><a href="https://www.gri.re.kr" target="_blank" rel="noopener">경기연구원</a></li>
