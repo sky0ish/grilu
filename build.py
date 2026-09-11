@@ -26,7 +26,7 @@ MENUS = [
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
         ("agreement", "단체협약"), ("law", "노동관계법령"),
-        ("documents", "문서자료"), ("photo", "사진자료"), ("video", "동영상"),
+        ("documents", "문서자료"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
         ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"),
@@ -629,12 +629,6 @@ def index():
   </div>
 </section>
 
-<section class="section soft" style="padding-top:0">
-  <div class="wrap">
-    <div class="sec-head" style="padding-top:64px"><h3><small>Gallery</small>사진자료</h3><a href="archive/photo.html" class="more">더보기</a></div>
-    <div class="gallery" data-gallery data-limit="4">{gallery}</div>
-  </div>
-</section>
 """ + footer(root)
 
 # ------------------------------------------------------------------ 기타 페이지 (로그인 등)
