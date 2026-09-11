@@ -178,7 +178,7 @@ def board(root, name, rows=None, intro="", extra_btn="", code=""):
 {intro}
 <div class="board-top">
   <span>전체 <b class="total">{len(rows)}</b>건</span>
-  <form onsubmit="return false"><select><option>제목</option><option>내용</option><option>작성자</option></select><input type="search" placeholder="검색어"><button type="submit">검색</button></form>
+  <form class="board-search" onsubmit="return false"><select name="f"><option value="title">제목</option><option value="content">내용</option><option value="author">작성자</option></select><input type="search" name="q" placeholder="검색어"><button type="submit" class="in-board" title="이 게시판 안에서만 검색">게시판내 검색</button><button type="button" class="all-site line" title="홈페이지 전체 검색">전체 검색</button></form>
 </div>
 <table class="tbl" data-board="{code}">
   <thead><tr><th class="num">번호</th><th>제목</th><th class="writer">작성자</th><th class="date">작성일</th><th class="hit">조회</th></tr></thead>
@@ -440,11 +440,6 @@ def p_audit(root):
         data = []
     rows = [(len(data) - i, f'{r["title"]} — {r["committee"]}', "경기도의회", r["date"], "-", f'audit/{r["id"]}.html') for i, r in enumerate(data)]
     intro = """
-<div class="info-cards" style="margin-bottom:24px">
-  <div class="item"><div class="ico">&#127963;</div><b>행정사무감사</b><p>경기도의회가 매년 11월 도 산하기관을 대상으로 실시하는 감사. 경기연구원은 주로 <b>기획재정위원회</b> 소관입니다.</p></div>
-  <div class="item"><div class="ico">&#128196;</div><b>회의록 원문</b><p>경기도의회 회의록 시스템(kms.ggc.go.kr)에서 경기연구원(구 경기개발연구원) 관련 회의록만 모았습니다.</p></div>
-  <div class="item"><div class="ico">&#128269;</div><b>활용</b><p>의원 질의와 연구원 답변을 통해 기관 운영 현안과 지적사항을 확인할 수 있습니다.</p></div>
-</div>
 <p>제4대(1995년)부터 제11대(2025년)까지 행정사무감사 회의록 중 경기연구원이 피감기관으로 포함된 회의입니다. 제목을 누르면 본문 전문과 원문 링크를 볼 수 있습니다.</p>
 """
     btn = '<a href="https://kms.ggc.go.kr/svc/cms/mnts/MntsTreeAuditList.do" target="_blank" rel="noopener" class="btn line">경기도의회 회의록 원문</a>'

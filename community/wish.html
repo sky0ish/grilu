@@ -8,7 +8,7 @@
 <link rel="icon" href="../images/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/style.css?v=202609120145">
+<link rel="stylesheet" href="../css/style.css?v=202609120157">
 </head>
 <body data-root="../">
 
@@ -52,7 +52,7 @@
 <p>노동조합에 바라는 점, 제안, 건의를 자유롭게 남겨 주세요. 승인된 조합원이면 누구나 글을 쓸 수 있고, 운영진이 확인 후 답변합니다.</p>
 <div class="board-top">
   <span>전체 <b class="total">10</b>건</span>
-  <form onsubmit="return false"><select><option>제목</option><option>내용</option><option>작성자</option></select><input type="search" placeholder="검색어"><button type="submit">검색</button></form>
+  <form class="board-search" onsubmit="return false"><select name="f"><option value="title">제목</option><option value="content">내용</option><option value="author">작성자</option></select><input type="search" name="q" placeholder="검색어"><button type="submit" class="in-board" title="이 게시판 안에서만 검색">게시판내 검색</button><button type="button" class="all-site line" title="홈페이지 전체 검색">전체 검색</button></form>
 </div>
 <table class="tbl" data-board="wish">
   <thead><tr><th class="num">번호</th><th>제목</th><th class="writer">작성자</th><th class="date">작성일</th><th class="hit">조회</th></tr></thead>
@@ -96,12 +96,12 @@
 </footer>
 <button class="totop" aria-label="맨 위로">&#8679;</button>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="../js/config.js?v=202609120145"></script>
-<script src="../js/events.js?v=202609120145"></script>
-<script src="../js/db.js?v=202609120145"></script>
-<script src="../js/main.js?v=202609120145"></script>
-<script src="../js/board.js?v=202609120145"></script>
-<script src="../js/auth.js?v=202609120145"></script>
-<script src="../js/admin.js?v=202609120145"></script>
+<script src="../js/config.js?v=202609120157"></script>
+<script src="../js/events.js?v=202609120157"></script>
+<script src="../js/db.js?v=202609120157"></script>
+<script src="../js/main.js?v=202609120157"></script>
+<script src="../js/board.js?v=202609120157"></script>
+<script src="../js/auth.js?v=202609120157"></script>
+<script src="../js/admin.js?v=202609120157"></script>
 </body>
 </html>

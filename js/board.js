@@ -80,14 +80,14 @@
   // 기타 노조 소식 목록: 자동 수집 뉴스 + 관리자 작성글 병합
   function renderNewsList(tbl, code) {
     var tbody = tbl.querySelector('tbody');
-    var page = parseInt(DB.qs('page') || '1', 10), q = (DB.qs('q') || '').trim();
+    var page = parseInt(DB.qs('page') || '1', 10), q = (DB.qs('q') || '').trim(), f = DB.qs('f') || 'title';
     var dbq = DB.client.from('posts').select('id,title,author_name,created_at,views,is_notice,attachments').eq('board', code).order('created_at', { ascending: false }).limit(300);
     Promise.all([loadNews(), dbq]).then(function (res) {
       var items = (res[0] || []).map(function (n) { return { link: newsUrl(n.id), html: esc(n.title) + ' <span class="note">[' + esc(n.provider) + ']</span>', raw: n.title + ' ' + n.summary, writer: '뉴스', date: n.date, hit: '-', notice: false }; });
       ((res[1] && res[1].data) || []).forEach(function (p) {
         items.push({ link: viewUrl(p.id), html: esc(p.title) + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : ''), raw: p.title, writer: p.author_name || '', date: fmt(p.created_at), hit: p.views, notice: p.is_notice });
       });
-      if (q) items = items.filter(function (x) { return x.raw.indexOf(q) >= 0; });
+      if (q) items = items.filter(function (x) { return (f === 'author' ? x.writer : f === 'content' ? x.raw : x.raw.split(' ')[0] + x.raw).indexOf(q) >= 0; });
       items.sort(function (a, b) { return (b.notice - a.notice) || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0); });
       var total = items.length, from = (page - 1) * PAGE;
       var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = total;
@@ -100,8 +100,22 @@
       renderWriteBtn(code);
       var note = document.querySelector('.static-note'); if (note) note.remove();
     });
+    bindBoardSearch(code, q, DB.qs('f'));
+  }
+
+
+  // 게시판 검색폼: [게시판내 검색] / [전체 검색]
+  function bindBoardSearch(code, q, f) {
     var form = document.querySelector('.board-top form');
-    if (form) { var inp = form.querySelector('input'); if (inp) inp.value = q; form.onsubmit = function () { location.href = listUrl(code) + '?q=' + encodeURIComponent(inp.value.trim()); return false; }; }
+    if (!form) return;
+    var inp = form.querySelector('input'); if (inp) inp.value = q || '';
+    var sel = form.querySelector('select'); if (sel && f) sel.value = f;
+    form.onsubmit = function () {
+      var v = inp.value.trim(); if (!v) { inp.focus(); return false; }
+      location.href = listUrl(code) + '?q=' + encodeURIComponent(v) + (sel && sel.value !== 'title' ? '&f=' + sel.value : ''); return false;
+    };
+    var all = form.querySelector('.all-site');
+    if (all) all.onclick = function () { var v = inp.value.trim(); if (!v) { inp.focus(); return; } location.href = DB.root + 'board/search.html?q=' + encodeURIComponent(v); };
   }
 
   // ---------- 목록 ----------
@@ -112,12 +126,12 @@
     if (code === 'othernews') return renderNewsList(tbl, code);
     var tbody = tbl.querySelector('tbody');
     var page = parseInt(DB.qs('page') || '1', 10);
-    var q = DB.qs('q') || '';
+    var q = DB.qs('q') || '', f = DB.qs('f') || 'title';
     var from = (page - 1) * PAGE, to = from + PAGE - 1;
 
     var query = DB.client.from('posts').select('id,title,author_name,created_at,views,is_notice,attachments', { count: 'exact' })
       .eq('board', code).order('is_notice', { ascending: false }).order('created_at', { ascending: false }).range(from, to);
-    if (q) query = query.ilike('title', '%' + q + '%');
+    if (q) query = query.ilike(f === 'content' ? 'content' : f === 'author' ? 'author_name' : 'title', '%' + q + '%');
 
     query.then(function (r) {
       if (r.error) {
@@ -164,18 +178,13 @@
       renderWriteBtn(code);
     });
 
-    // 검색 폼
-    var form = document.querySelector('.board-top form');
-    if (form) {
-      var inp = form.querySelector('input'); if (inp) inp.value = q;
-      form.onsubmit = function () { location.href = listUrl(code) + '?q=' + encodeURIComponent(inp.value.trim()); return false; };
-    }
+    bindBoardSearch(code, q, f);
   }
   function renderPaging(total, page, q) {
     var box = document.querySelector('.paging');
     if (!box) return;
     var pages = Math.max(1, Math.ceil(total / PAGE)), s = Math.max(1, page - 4), e = Math.min(pages, s + 9), html = '';
-    var base = location.pathname + '?' + (q ? 'q=' + encodeURIComponent(q) + '&' : '') + 'page=';
+    var f0 = DB.qs('f'); var base = location.pathname + '?' + (q ? 'q=' + encodeURIComponent(q) + '&' : '') + (f0 ? 'f=' + f0 + '&' : '') + 'page=';
     if (page > 1) html += '<a href="' + base + (page - 1) + '">&laquo;</a>';
     for (var i = s; i <= e; i++) html += '<a href="' + base + i + '"' + (i === page ? ' class="on"' : '') + '>' + i + '</a>';
     if (page < pages) html += '<a href="' + base + (page + 1) + '">&raquo;</a>';

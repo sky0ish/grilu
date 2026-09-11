@@ -384,3 +384,8 @@ mark.kw-hit.cur{background:#f39800;color:#fff}
 .rules-body .rule-hist{font-size:13px;color:#777;background:#f8f9fb;padding:6px 12px;border-radius:6px;margin:6px 0 12px}
 .rules-body .rule-hist summary{cursor:pointer;color:var(--primary)}
 @media (max-width:800px){.rule-parts{grid-template-columns:1fr}.rule-toc{columns:1}}
+
+/* 게시판 검색: 게시판내 / 전체 */
+.board-top form.board-search button.line{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+.board-top form.board-search button{white-space:nowrap}
+@media (max-width:640px){.board-top{flex-direction:column;align-items:stretch;gap:8px}.board-top form{flex-wrap:wrap}}
