@@ -21,9 +21,9 @@
   }
   function boardSection(code) {
     if (['notice', 'news', 'statement', 'newsletter'].indexOf(code) >= 0) return 'news';
-    if (['documents', 'agreement', 'law', 'photo', 'video'].indexOf(code) >= 0) return 'archive';
+    if (['documents', 'agreement', 'law', 'photo', 'video', 'council'].indexOf(code) >= 0) return 'archive';
     if (code === 'rules' || code === 'welfare' || code === 'join') return 'about';
-    if (['audit', 'regulation', 'council'].indexOf(code) >= 0) return 'gri';
+    if (['audit', 'regulation'].indexOf(code) >= 0) return 'gri';
     return 'community';
   }
   function listUrl(code) { return DB.root + boardSection(code) + '/' + code + '.html'; }

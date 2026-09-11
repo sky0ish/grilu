@@ -25,7 +25,7 @@ MENUS = [
         ("notice", "공지사항"), ("news", "노조소식"), ("statement", "성명서·보도자료"),
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
-        ("agreement", "단체협약"), ("law", "노동관계법령"),
+        ("council", "노사협의회"), ("agreement", "단체협약"), ("law", "노동관계법령"),
         ("documents", "문서자료"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
@@ -33,7 +33,7 @@ MENUS = [
         ("calendar", "일정 달력"),
     ]),
     ("gri", "GRI", "경기연구원 관련 공개 자료", [
-        ("audit", "행정사무감사"), ("regulation", "규정 및 지침"), ("council", "노사협의회"),
+        ("audit", "행정사무감사"), ("regulation", "규정 및 지침"),
     ]),
 ]
 
@@ -496,7 +496,7 @@ PAGES = {
     ("news", "regulation"): p_regulation, ("news", "council"): p_council,
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("community", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
-    ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("gri", "council"): p_council,
+    ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
     ("community", "staff"): p_staff, ("gri", "audit"): p_audit,
 }
 
@@ -537,7 +537,7 @@ def index():
       <div class="eyebrow">Together We Grow</div>
       <h2>함께 지키는 권리,<br><em>함께 만드는 변화</em></h2>
       <p>규정과 지침, 노사협의회 결과를 투명하게 공개하고 조합원의 목소리를 정책에 반영합니다.</p>
-      <div class="cta"><a href="gri/regulation.html" class="primary">규정 및 지침</a><a href="gri/council.html" class="ghost">노사협의회</a></div>
+      <div class="cta"><a href="gri/regulation.html" class="primary">규정 및 지침</a><a href="archive/council.html" class="ghost">노사협의회</a></div>
     </div></div>
     <div class="slide"><div class="wrap">
       <div class="eyebrow">Your Voice Matters</div>
@@ -564,7 +564,7 @@ def index():
   <nav class="quick" aria-label="바로가기"><ul>
     <li><a href="news/notice.html"><span class="ico">&#128226;</span>공지사항</a></li>
     <li><a href="gri/regulation.html"><span class="ico">&#128218;</span>규정 및 지침</a></li>
-    <li><a href="gri/council.html"><span class="ico">&#129309;</span>노사협의회</a></li>
+    <li><a href="archive/council.html"><span class="ico">&#129309;</span>노사협의회</a></li>
     <li><a href="community/calendar.html"><span class="ico">&#128197;</span>일정 달력</a></li>
     <li><a href="community/counsel.html"><span class="ico">&#128172;</span>소통상담</a></li>
     <li><a href="about/join.html"><span class="ico">&#9997;</span>조합가입</a></li>
@@ -589,7 +589,7 @@ def index():
         </div>
       </div>
       <div class="card">
-        <h4>노사협의회 <a href="gri/council.html" class="more">더보기</a></h4>
+        <h4>노사협의회 <a href="archive/council.html" class="more">더보기</a></h4>
         <ul class="list compact" data-latest="council" data-limit="5" data-badge="협의회|council">{li(council, code="council", badge=("협의회", "council"))}</ul>
         <div class="link-cards">
           <a href="community/counsel.html" class="c2"><span class="ico">&#128172;</span><span>소통상담하기<span>비밀 보장 · 3일 이내 회신</span></span></a>
