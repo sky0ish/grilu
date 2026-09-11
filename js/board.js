@@ -29,7 +29,14 @@
   function viewUrl(id) { return DB.root + 'board/view.html?id=' + id; }
   function writeUrl(code, id) { return DB.root + 'board/write.html?board=' + code + (id ? '&id=' + id : ''); }
   function isNew(iso) { return (Date.now() - new Date(iso).getTime()) < 3 * 86400000; }
+  function attachCount(a) { return a ? (a.length || (a.files && a.files.length) || 0) : 0; }
   function attachHtml(list) {
+    if (list && !list.length && list.files && list.files.length) {
+      // 그룹웨어 이관 글: 파일명만 보관 (원문은 그룹웨어)
+      return '<div class="attach box"><b>첨부파일</b><ul class="bul">' + list.files.map(function (n) {
+        return '<li>&#128206; ' + esc(n) + ' <span class="note">— 원문은 그룹웨어(gw.gri.re.kr)에서 내려받을 수 있습니다</span></li>';
+      }).join('') + '</ul></div>';
+    }
     if (!list || !list.length) return '';
     return '<div class="attach"><b>첨부파일</b><ul>' + list.map(function (a) {
       return '<li><a href="' + esc(a.url) + '" target="_blank" rel="noopener">&#128206; ' + esc(a.name) + '</a> <span class="note">(' + Math.round((a.size || 0) / 1024) + ' KB)</span></li>';
@@ -52,12 +59,23 @@
 
     query.then(function (r) {
       if (r.error) {
-        tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#c33">' + (r.error.code === 'PGRST301' || /permission|policy|row-level/i.test(r.error.message) ? '조합원 전용 게시판입니다. 로그인 후 이용해 주세요.' : '목록을 불러오지 못했습니다: ' + esc(r.error.message)) + '</td></tr>';
+        if (r.error.code === 'PGRST301' || /permission|policy|row-level/i.test(r.error.message)) {
+          tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#c33">조합원 전용 게시판입니다. 로그인 후 이용해 주세요.</td></tr>';
+        } else {
+          // DB 준비 전(테이블 없음 등)에는 예시 목록 유지
+          console.warn('posts list error:', r.error.message);
+        }
         return;
       }
       var total = r.count || 0;
       var cnt = document.querySelector('.board-top .total');
       if (cnt) cnt.textContent = total;
+      if (!r.data.length && !q && page === 1) {
+        // 아직 등록된 글이 없으면 예시 목록(정적 HTML)을 그대로 둔다
+        var note = document.querySelector('.static-note'); if (note) note.textContent = '※ 아직 등록된 게시글이 없어 예시 목록이 표시됩니다. 관리자 로그인 후 글쓰기로 등록하세요.';
+        if (cnt) cnt.textContent = tbody.querySelectorAll('tr').length;
+        renderWriteBtn(code); return;
+      }
       if (!r.data.length) {
         tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#888">등록된 게시글이 없습니다.</td></tr>';
       } else {
@@ -65,7 +83,7 @@
           var num = p.is_notice ? '<span class="badge" style="background:var(--primary);color:#fff;font-size:11px;padding:2px 6px;border-radius:3px">공지</span>' : (total - from - i);
           return '<tr' + (p.is_notice ? ' style="background:#f8f9fd"' : '') + '><td class="num">' + num + '</td>' +
             '<td class="tit"><a href="' + viewUrl(p.id) + '">' + esc(p.title) + '</a>' +
-            (p.attachments && p.attachments.length ? ' <span title="첨부">&#128206;</span>' : '') +
+            (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') +
             (isNew(p.created_at) ? ' <span class="badge new" style="font-size:11px;color:#fff;background:#e5533c;padding:1px 6px;border-radius:3px">N</span>' : '') +
             '</td><td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td><td class="hit">' + p.views + '</td></tr>';
         }).join('');
@@ -150,7 +168,7 @@
         if (!r.data) return alert('게시글을 불러올 수 없습니다.');
         form.title.value = r.data.title; form.content.value = r.data.content || '';
         if (form.is_notice) form.is_notice.checked = r.data.is_notice;
-        existing = r.data.attachments || [];
+        existing = Array.isArray(r.data.attachments) ? r.data.attachments : [];
         renderExisting();
       });
     }
@@ -195,7 +213,7 @@
       var badge = ul.getAttribute('data-badge'); // "규정|reg"
       DB.client.from('posts').select('id,title,created_at').eq('board', code).order('created_at', { ascending: false }).limit(limit).then(function (r) {
         if (r.error) return;
-        if (!r.data.length) { ul.innerHTML = '<li><span style="color:#999">등록된 글이 없습니다.</span></li>'; return; }
+        if (!r.data.length) return; // 글이 없으면 예시 목록 유지
         ul.innerHTML = r.data.map(function (p) {
           var b = badge ? '<span class="badge ' + badge.split('|')[1] + '">' + badge.split('|')[0] + '</span>' : (isNew(p.created_at) ? '<span class="badge new">N</span>' : '');
           var d = fmt(p.created_at); if (badge) d = d.slice(5);
@@ -223,7 +241,7 @@
     var code = gal.getAttribute('data-board');
     DB.client.from('posts').select('id,title,created_at,attachments,content').eq('board', code).order('created_at', { ascending: false }).limit(30).then(function (r) {
       if (r.error) return;
-      if (!r.data.length) { gal.innerHTML = '<p style="grid-column:1/-1;color:#888;padding:30px;text-align:center">등록된 자료가 없습니다.</p>'; return; }
+      if (!r.data.length) return; // 자료가 없으면 예시 유지
       gal.innerHTML = r.data.map(function (p) {
         var img = (p.attachments || []).filter(function (a) { return /\.(jpe?g|png|gif|webp)$/i.test(a.name); })[0];
         var yt = code === 'video' && (p.content || '').match(/(?:youtu\.be\/|v=)([\w-]{11})/);
@@ -250,21 +268,36 @@
     };
   }
 
-  // 예시 게시글 보기 (Supabase 연결 전)
+  // 예시 게시글 보기 (Supabase 연결 전 / 예시 목록의 글)
   function renderDemo() {
     var box = document.getElementById('postView');
     if (!box || DB.qs('demo') !== '1') return false;
-    var t = DB.qs('t') || '예시 게시글', d = DB.qs('d') || '', w = DB.qs('w') || '노동조합';
-    box.innerHTML = '<div class="post-head"><h4 style="border:0;padding:0;margin:0 0 8px;color:#222;font-size:24px">' + esc(t) + '</h4>' +
-      '<div class="note">' + esc(w) + ' &nbsp;|&nbsp; ' + esc(d) + '</div></div>' +
-      '<div class="post-body box" style="line-height:1.9"><p><b>이 글은 홈페이지 구성 확인용 예시 게시글입니다.</b></p>' +
-      '<p>실제 게시글은 Supabase 연결(js/config.js) 후 관리자가 로그인하여 각 게시판의 <b>글쓰기</b> 버튼으로 등록하면 이 자리에 본문·첨부파일이 표시됩니다.</p></div>' +
-      '<div class="board-bottom" style="justify-content:space-between"><a href="javascript:history.back()" class="btn line">목록</a></div>';
+    var t = DB.qs('t') || '예시 게시글', d = DB.qs('d') || '', w = DB.qs('w') || '노동조합', b = DB.qs('b') || '';
+    var name = b ? boardName(b) : '게시글';
+    document.title = t + ' | ' + name + ' | ' + (cfg.SITE_NAME || '');
+    var pt = document.querySelector('.page-title'); if (pt) pt.textContent = name;
+    var bodies = {
+      notice: ['조합원 여러분께 안내드립니다.', '자세한 내용은 노동조합 사무실(내선 3114) 또는 고충상담 게시판을 통해 문의해 주시기 바랍니다.', '조합원 여러분의 많은 관심과 참여를 부탁드립니다.'],
+      news: ['경기연구원 노동조합의 활동 소식을 전해드립니다.', '노동조합은 조합원의 권익 향상과 건강한 노사관계를 위해 계속 노력하겠습니다.'],
+      statement: ['경기연구원 노동조합은 다음과 같이 입장을 밝힙니다.', '노동조합은 연구원 구성원의 노동권과 연구 자율성을 지키기 위해 모든 노력을 다할 것입니다.', '2026년 ○월 ○일 경기연구원 노동조합'],
+      regulation: ['경기연구원 규정 및 지침 원문입니다.', '개정 사항은 시행일 이후 적용되며, 원문 파일은 첨부파일에서 내려받을 수 있습니다.'],
+      rules: ['노동조합 규약·규정 원문입니다. 원문 파일은 첨부파일에서 내려받을 수 있습니다.'],
+      agreement: ['노사가 체결한 협약 원문입니다. 원문 파일은 첨부파일에서 내려받을 수 있습니다.'],
+      law: ['노동관계법령 안내입니다. 원문은 국가법령정보센터(law.go.kr)에서 확인할 수 있습니다.']
+    };
+    var paras = bodies[b] || ['게시글 본문입니다.'];
+    box.innerHTML = '<div class="post-head" style="border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px"><h4 style="border:0;padding:0;margin:0 0 8px;color:#222;font-size:24px">' + esc(t) + '</h4>' +
+      '<div class="note">작성자 ' + esc(w) + ' &nbsp;|&nbsp; 게시일 ' + esc(d) + '</div></div>' +
+      '<div class="post-body" style="min-height:160px;line-height:1.9">' + paras.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('') +
+      '<p class="note" style="margin-top:24px;padding:12px;background:#f6f7fa;border-radius:6px">※ 이 글은 홈페이지 구성 확인용 <b>예시 게시글</b>입니다. 관리자가 로그인 후 각 게시판의 글쓰기 버튼으로 실제 게시글을 등록하면 이 자리에 본문과 첨부파일이 표시됩니다.</p></div>' +
+      '<div class="board-bottom" style="justify-content:space-between"><a href="' + (b ? listUrl(b) : 'javascript:history.back()') + '" class="btn line">목록</a></div>';
     return true;
   }
+  // 예시 글은 DB 연결과 무관하게 즉시 표시
+  var demoShown = renderDemo();
 
   document.addEventListener('db:ready', function () {
-    if (renderDemo()) return;
+    if (demoShown) return;
     if (!DB.ready) return;   // 정적 모드
     renderList(); renderView(); renderWrite(); renderLatest(); renderGallery(); bindCounsel();
   });

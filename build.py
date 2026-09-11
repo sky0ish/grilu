@@ -156,16 +156,16 @@ def sub_page(sec, page):
 """ + footer(root)
 
 # ------------------------------------------------------------------ 게시판 공통
-def demo_href(root, title, date, writer="노동조합"):
+def demo_href(root, title, date, writer="노동조합", code=""):
     from urllib.parse import quote
-    return f"{root}board/view.html?demo=1&t={quote(title)}&d={date}&w={quote(writer)}"
+    return f"{root}board/view.html?demo=1&b={code}&t={quote(title)}&d={date}&w={quote(writer)}"
 
-def rows_html(rows, root="../"):
+def rows_html(rows, root="../", code=""):
     out = []
     for i, r in enumerate(rows):
         num, title, writer, date, hit = r
         badge = ' <span class="badge new" style="font-size:11px;color:#fff;background:#e5533c;padding:1px 6px;border-radius:3px">N</span>' if i < 2 else ""
-        out.append(f'<tr><td class="num">{num}</td><td class="tit"><a href="{demo_href(root, title, date, writer)}">{title}</a>{badge}</td><td class="writer">{writer}</td><td class="date">{date}</td><td class="hit">{hit}</td></tr>')
+        out.append(f'<tr><td class="num">{num}</td><td class="tit"><a href="{demo_href(root, title, date, writer, code)}">{title}</a>{badge}</td><td class="writer">{writer}</td><td class="date">{date}</td><td class="hit">{hit}</td></tr>')
     return "".join(out)
 
 def board(root, name, rows=None, intro="", extra_btn="", code=""):
@@ -178,7 +178,7 @@ def board(root, name, rows=None, intro="", extra_btn="", code=""):
 </div>
 <table class="tbl" data-board="{code}">
   <thead><tr><th class="num">번호</th><th>제목</th><th class="writer">작성자</th><th class="date">작성일</th><th class="hit">조회</th></tr></thead>
-  <tbody>{rows_html(rows, root)}</tbody>
+  <tbody>{rows_html(rows, root, code)}</tbody>
 </table>
 <div class="paging"><a href="#">&laquo;</a><a href="#" class="on">1</a><a href="#">2</a><a href="#">3</a><a href="#">&raquo;</a></div>
 <div class="board-bottom">{extra_btn}<a href="#" class="btn">글쓰기</a></div>
@@ -435,11 +435,11 @@ PAGES = {
 # ------------------------------------------------------------------ 메인 페이지
 def index():
     root = ""
-    def li(items, badge=None):
+    def li(items, badge=None, code=""):
         out = ""
         for i, (t, d) in enumerate(items):
             b = f'<span class="badge {badge[1]}">{badge[0]}</span>' if badge else (f'<span class="badge new">N</span>' if i < 2 else "")
-            out += f'<li>{b}<a href="{demo_href(root, t, d)}">{t}</a><span class="date">{d}</span></li>'
+            out += f'<li>{b}<a href="{demo_href(root, t, d, code=code)}">{t}</a><span class="date">{d}</span></li>'
         return out
     notice = [("2026년 3분기 노사협의회 안건 접수 안내", "2026-09-08"), ("추석 명절 조합원 선물 지급 안내", "2026-09-04"),
               ("제○기 집행부 하반기 조합원 간담회 일정", "2026-08-28"), ("2026년 상반기 조합비 사용내역 공개", "2026-08-11"),
@@ -498,20 +498,20 @@ def index():
     <div class="news-grid">
       <div class="card" data-tabs>
         <div class="tabs"><button class="on">공지사항</button><button>노조소식</button><button>성명서·보도자료</button></div>
-        <div class="tab-panel on"><ul class="list" data-latest="notice" data-limit="6">{li(notice)}</ul><div style="text-align:right;margin-top:8px"><a href="news/notice.html" class="more">더보기</a></div></div>
-        <div class="tab-panel"><ul class="list" data-latest="news" data-limit="6">{li(news)}</ul><div style="text-align:right;margin-top:8px"><a href="news/news.html" class="more">더보기</a></div></div>
-        <div class="tab-panel"><ul class="list" data-latest="statement" data-limit="6">{li(stmt)}</ul><div style="text-align:right;margin-top:8px"><a href="news/statement.html" class="more">더보기</a></div></div>
+        <div class="tab-panel on"><ul class="list" data-latest="notice" data-limit="6">{li(notice, code="notice")}</ul><div style="text-align:right;margin-top:8px"><a href="news/notice.html" class="more">더보기</a></div></div>
+        <div class="tab-panel"><ul class="list" data-latest="news" data-limit="6">{li(news, code="news")}</ul><div style="text-align:right;margin-top:8px"><a href="news/news.html" class="more">더보기</a></div></div>
+        <div class="tab-panel"><ul class="list" data-latest="statement" data-limit="6">{li(stmt, code="statement")}</ul><div style="text-align:right;margin-top:8px"><a href="news/statement.html" class="more">더보기</a></div></div>
       </div>
       <div class="card">
         <h4>규정 및 지침 <a href="news/regulation.html" class="more">더보기</a></h4>
-        <ul class="list compact" data-latest="regulation" data-limit="5" data-badge="규정|reg">{li(regs, ("규정", "reg"))}</ul>
+        <ul class="list compact" data-latest="regulation" data-limit="5" data-badge="규정|reg">{li(regs, code="regulation", badge=("규정", "reg"))}</ul>
         <div class="link-cards">
           <a href="{GW_REG_URL}" target="_blank" rel="noopener" class="c1"><span class="ico">&#128194;</span><span>그룹웨어 규정 및 지침<span>원문 보기 (내부망 로그인)</span></span></a>
         </div>
       </div>
       <div class="card">
         <h4>노사협의회 <a href="news/council.html" class="more">더보기</a></h4>
-        <ul class="list compact" data-latest="council" data-limit="5" data-badge="협의회|council">{li(council, ("협의회", "council"))}</ul>
+        <ul class="list compact" data-latest="council" data-limit="5" data-badge="협의회|council">{li(council, code="council", badge=("협의회", "council"))}</ul>
         <div class="link-cards">
           <a href="community/counsel.html" class="c2"><span class="ico">&#128172;</span><span>고충상담하기<span>비밀 보장 · 3일 이내 회신</span></span></a>
           <a href="community/board.html" class="c3"><span class="ico">&#128221;</span><span>조합원 게시판<span>자유롭게 의견을 나눠주세요</span></span></a>

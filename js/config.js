@@ -6,8 +6,8 @@
    값이 비어 있으면 사이트는 예시 데이터(정적)로 동작합니다.
    ============================================================ */
 window.GRILU_CONFIG = {
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: "",
+  SUPABASE_URL: "https://ryyvwpkhlqbcsjbttxca.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_-gj-jLFfB9L5yqlboJAD5A_Y-shrQI0",
   SITE_NAME: "경기연구원 노동조합",
   PAGE_SIZE: 15
 };
