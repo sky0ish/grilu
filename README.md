@@ -96,6 +96,9 @@ Supabase 는 프로젝트 `ryyvwpkhlqbcsjbttxca` 에 연결되어 있고(`js/con
 사진을 바꾸려면 `5.images/배경1.webp` 를 교체하고 `python images/make_hero.py` 실행.
 (사진이 없으면 `images/gen_bg_scene.py` 로 만든 `hero-bg.svg` 가 대신 표시됩니다.)
 
+### 경기연구원 제규정 갱신
+`python tools/import_rules.py` (PDF 내려받아 텍스트 추출 → `data/gri_rules.json`) 후 `python build.py`. 편별 전문 페이지는 `gri/regulations/partN.html`.
+
 ### 행정사무감사 자료 갱신
 `python tools/import_audit.py` 실행 → `data/audit.json`, `supabase/seed_audit.sql` 갱신 → `python build.py` → 새 SQL 을 Supabase 에서 실행.
 

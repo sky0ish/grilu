@@ -32,7 +32,7 @@ MENUS = [
         ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"), ("wish", "노조에 바란다"),
     ]),
     ("gri", "GRI", "경기연구원 관련 공개 자료", [
-        ("audit", "행정사무감사"), ("regulation", "규정 및 지침"), ("calendar", "일정 달력"),
+        ("audit", "행정사무감사"), ("regulations", "제규정"), ("regulation", "규정 및 지침"), ("calendar", "일정 달력"),
     ]),
 ]
 
@@ -369,6 +369,55 @@ def p_members(root):
 <p class="note" style="margin-top:20px">※ 조합비 납부 기준 조합원 수 등 공식 통계와 차이가 있을 수 있습니다. 홈페이지 미가입 조합원은 집계에 포함되지 않습니다.</p>
 """
 
+def _gri_rules():
+    import json as _json
+    try:
+        return _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "gri_rules.json"), encoding="utf-8"))
+    except Exception:
+        return []
+
+def p_regulations(root):
+    """경기연구원 제규정: 편별 목차 (전문은 gri/regulations/partN.html)"""
+    data = _gri_rules()
+    cards = ""
+    for part in data:
+        items = "".join(f'<li><a href="regulations/part{part["no"]}.html#r{it["id"]}">{it["sec"] if not it["sub"] else "&nbsp;&nbsp;└ " + it["sub"]}</a></li>' for it in part["items"])
+        cards += f"""
+<div class="rule-part">
+  <div class="rule-part-head"><a href="regulations/part{part["no"]}.html"><b>{part["part"]}</b> <span class="note">{len(part["items"])}개 규정</span></a>
+    <a href="regulations/part{part["no"]}.html" class="btn sm">전문 보기</a></div>
+  <ul class="bul">{items}</ul>
+</div>"""
+    intro = ('<p>경기연구원 홈페이지 <a href="https://www.gri.re.kr/web/contents/managenotice06.do" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">경영공시 &gt; 제규정</a>에 '
+             '공개된 규정을 <b>편(編)별로 한 페이지에 묶어</b> 전문을 바로 읽을 수 있게 정리했습니다. 편 제목을 누르면 그 편의 모든 규정이 한 화면에 이어서 나오고, 개별 규정을 누르면 해당 위치로 이동합니다.</p>')
+    return intro + '<div class="rule-parts">' + cards + '</div>' + '<p class="note" style="margin-top:20px">※ PDF 원문에서 자동 추출한 텍스트라 띄어쓰기·표 서식이 일부 다를 수 있습니다. 정확한 내용은 각 규정의 원문(PDF)을 확인하세요. 자료 갱신: <code>python tools/import_rules.py</code> 후 <code>python build.py</code></p>'
+
+def regulations_pages():
+    data = _gri_rules()
+    for i, part in enumerate(data):
+        toc = "".join(f'<li><a href="#r{it["id"]}">{it["sec"] if not it["sub"] else "&nbsp;&nbsp;└ " + it["sub"]}</a> <span class="note">{it.get("chars", 0):,}자</span></li>' for it in part["items"])
+        body_items = ""
+        for it in part["items"]:
+            body_items += f"""
+<section class="rule-item" id="r{it["id"]}">
+  <h4 class="rule-title">{it["title"]}<span class="note" style="font-weight:400;font-size:13px;margin-left:10px">{it["part"]} {"› " + it["sec"] if it["sub"] else ""}</span></h4>
+  <div class="rule-links"><a href="{it["view"]}" target="_blank" rel="noopener">경기연구원 원문 페이지</a> · <a href="{it["dl"]}" target="_blank" rel="noopener">PDF 내려받기</a> · <a href="#top">▲ 맨 위로</a></div>
+  {it["html"] or '<p class="note">본문 텍스트를 추출하지 못했습니다. 원문 PDF를 확인하세요.</p>'}
+</section>"""
+        nav = ""
+        if i > 0: nav += f'<a href="part{data[i-1]["no"]}.html" class="btn line">◀ {data[i-1]["part"]}</a>'
+        nav += '<a href="../regulations.html" class="btn line">목차</a>'
+        if i + 1 < len(data): nav += f'<a href="part{data[i+1]["no"]}.html" class="btn line">{data[i+1]["part"]} ▶</a>'
+        body = f"""
+<a id="top"></a>
+<div class="box" style="margin-bottom:20px"><b>{part["part"]}</b> — 이 편에 속한 {len(part["items"])}개 규정의 전문입니다. 아래 목차를 누르면 해당 규정으로 이동합니다.
+<ol class="rule-toc">{toc}</ol></div>
+<div class="board-bottom" style="justify-content:center;gap:8px;margin:0 0 10px">{nav}</div>
+<article class="post-body minutes rules-body">{body_items}</article>
+<div class="board-bottom" style="justify-content:center;gap:8px;margin-top:30px">{nav}</div>"""
+        write(f"gri/regulations/part{part['no']}.html", simple_page(f'{part["part"]} — 경기연구원 제규정', body, wide=True, root="../../", visual="제규정"))
+    return len(data)
+
 def p_staff(root):
     intro = '<p>노동조합 운영진(집행부·대의원)이 운영 사항을 공유하는 게시판입니다. 승인된 조합원만 열람할 수 있으며 글쓰기는 관리자(운영진)만 가능합니다.</p>'
     return board(root, "운영진 게시판", None, intro, code="staff")
@@ -532,7 +581,7 @@ PAGES = {
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("gri", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
-    ("community", "staff"): p_staff, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
+    ("community", "staff"): p_staff, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
 }
 
 # ------------------------------------------------------------------ 메인 페이지
@@ -813,6 +862,7 @@ def main():
     write("board/write.html", simple_page("글쓰기", WRITE, wide=True))
     write("board/search.html", simple_page("자료검색", SEARCH, wide=True))
     n += audit_pages()
+    n += regulations_pages()
     write("admin/index.html", simple_page("관리자", ADMIN, wide=True))
     write("admin/members.html", simple_page("회원관리", ADMIN_MEMBERS, wide=True))
     write("admin/events.html", simple_page("일정관리", ADMIN_EVENTS, wide=True))

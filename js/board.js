@@ -531,7 +531,7 @@
   // 예시 글은 DB 연결과 무관하게 즉시 표시
   var demoShown = renderDemo();
 
-  var staticMinutes = document.querySelector('.post-body.minutes');
+  var staticMinutes = document.querySelector('.post-body.minutes:not(.rules-body)');
   if (staticMinutes) renderKeywords(staticMinutes, staticMinutes);
 
   document.addEventListener('db:ready', function () {

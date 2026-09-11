@@ -362,3 +362,25 @@ button{font-family:inherit;cursor:pointer}
 .kw-stats a.kw.on b,.kw-stats a.kw:hover b,.kw-stats a.kw.on .pos{color:#ffd27a}
 mark.kw-hit{background:#fff2a8;padding:0 2px;border-radius:2px}
 mark.kw-hit.cur{background:#f39800;color:#fff}
+
+/* ---------- 경기연구원 제규정 ---------- */
+.rule-parts{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:20px}
+.rule-part{border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;background:#fff}
+.rule-part-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:2px solid var(--primary)}
+.rule-part-head b{font-size:18px;color:var(--primary)}
+.rule-part .bul li{font-size:14.5px;line-height:1.7}
+.rule-toc{margin:10px 0 0 20px;columns:2;column-gap:30px;font-size:14.5px;line-height:1.8}
+.rule-toc li a{color:var(--primary)}
+.rules-body{line-height:1.85;font-size:15px}
+.rules-body .rule-item{padding:26px 0;border-top:3px solid var(--primary);margin-top:30px;scroll-margin-top:90px}
+.rules-body .rule-title{font-size:22px;color:#222;border:0;padding:0;margin:0 0 6px}
+.rules-body .rule-links{font-size:13px;color:#666;margin-bottom:14px}
+.rules-body .rule-links a{color:var(--primary);text-decoration:underline}
+.rules-body .rule-ch{font-size:16px;color:var(--gri-blue);margin:22px 0 8px;font-weight:800}
+.rules-body .rule-doc{font-size:15px;color:#555;background:#f4f6fa;padding:8px 12px;border-radius:6px;margin:20px 0 10px}
+.rules-body .rule-art{margin:10px 0 4px}
+.rules-body .rule-art b{color:#111}
+.rules-body p{margin:4px 0}
+.rules-body .rule-hist{font-size:13px;color:#777;background:#f8f9fb;padding:6px 12px;border-radius:6px;margin:6px 0 12px}
+.rules-body .rule-hist summary{cursor:pointer;color:var(--primary)}
+@media (max-width:800px){.rule-parts{grid-template-columns:1fr}.rule-toc{columns:1}}
