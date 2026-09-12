@@ -598,3 +598,8 @@ form.board-search button.on,form.board-search button.line.on{background:var(--gr
 .link-cards .c4{background:linear-gradient(135deg,rgba(170,195,235,.55),rgba(205,222,245,.55))}
 /* 행정사무감사 카드: 연회색 */
 .link-cards .c4{background:linear-gradient(135deg,rgba(200,204,212,.55),rgba(226,229,235,.55))}
+/* 표 열 너비 조절 손잡이 */
+.doc-table thead th{position:relative}
+.col-resize{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;user-select:none;z-index:2}
+.col-resize:hover{background:rgba(31,57,143,.25)}
+.doc-table td{word-break:break-word}

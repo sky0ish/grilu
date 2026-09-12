@@ -115,3 +115,30 @@
     render();
   }
 })();
+
+/* ---------- 표 열 너비 조절: 머리글 오른쪽 가장자리를 끌어서 조절, 두 번 누르면 초기화. 페이지별로 브라우저에 기억 ---------- */
+(function () {
+  var tables = document.querySelectorAll('table.doc-table');
+  if (!tables.length) return;
+  tables.forEach(function (tbl, ti) {
+    var ths = tbl.querySelectorAll('thead th'); if (!ths.length) return;
+    var key = 'grilu-colw:' + location.pathname + ':' + ti;
+    var saved = null; try { saved = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
+    if (saved && saved.length === ths.length) { tbl.style.tableLayout = 'fixed'; ths.forEach(function (th, i) { if (saved[i]) th.style.width = saved[i] + 'px'; }); }
+    ths.forEach(function (th, i) {
+      th.style.position = 'relative';
+      var h = document.createElement('span'); h.className = 'col-resize'; h.title = '끌어서 열 너비 조절 · 두 번 누르면 초기화';
+      th.appendChild(h);
+      h.addEventListener('dblclick', function () { try { localStorage.removeItem(key); } catch (e) {} ths.forEach(function (t) { t.style.width = ''; }); tbl.style.tableLayout = ''; });
+      h.addEventListener('mousedown', function (e) {
+        e.preventDefault(); var x0 = e.clientX, w0 = th.getBoundingClientRect().width;
+        if (tbl.style.tableLayout !== 'fixed') { ths.forEach(function (t) { t.style.width = t.getBoundingClientRect().width + 'px'; }); tbl.style.tableLayout = 'fixed'; }
+        document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
+        function mv(ev) { th.style.width = Math.max(60, w0 + ev.clientX - x0) + 'px'; }
+        function up() { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); document.body.style.cursor = ''; document.body.style.userSelect = '';
+          try { localStorage.setItem(key, JSON.stringify(Array.prototype.map.call(ths, function (t) { return Math.round(t.getBoundingClientRect().width); }))); } catch (e) {} }
+        document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+      });
+    });
+  });
+})();
