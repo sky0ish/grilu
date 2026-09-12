@@ -51,7 +51,7 @@
   var members = [];
   var TABS = [['pending', '승인 대기'], ['approved', '회원'], ['associate', '준회원'], ['admin', '관리자'], ['all', '전체']];
   /* 직급 구분 — 가입 화면(build.py)과 같게 */
-  var POSITIONS = ['선임연구위원', '연구위원', '공무직_연구원', '공무직_행정원', '행정관리직', '계약직_연구직', '계약직_공무직'];
+  var POSITIONS = ['선임연구위원', '연구위원', '공무직_선임연구원', '공무직_연구원', '공무직_행정원', '행정관리직', '계약직_연구위원급', '계약직_연구원', '계약직_공무직'];
   function initMembers() {
     var q = new URLSearchParams(location.search);
     var filter = document.getElementById('memberFilter');
