@@ -10,7 +10,7 @@ import os, re, io, json, html, zipfile, tempfile, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ZIPS = sorted(__import__("glob").glob(os.path.join(ROOT, "data", "gw", "gw_export*.zip")))
 FILES = os.path.join(ROOT, "files", "gw")
-MAX_ATT = 15 * 1024 * 1024      # 이보다 큰 첨부(동영상 등)는 저장소에 넣지 않고 그룹웨어 안내만
+MAX_ATT = 95 * 1024 * 1024      # GitHub 파일 한도(100MB) 안의 첨부는 모두 저장 (그보다 큰 동영상만 그룹웨어 안내)
 BOARD_MAP = {"000000371": ("committee", "심의위원회 상정(안)"), "0000001yl": ("rules", "노사협의회 운영규약"),
              "0000001ym": ("council", "공고 및 회의록"), "0000001yn": ("council", "안건 제안"), "0000001hy": ("director", "노동이사 활동보고"), "00000039t": ("budget", "예산결산서")}
 
@@ -198,7 +198,15 @@ def clean_body(h):
     body = re.sub(r"<script.*?</script>", "", body, flags=re.S | re.I)
     body = re.sub(r"<(?:link|meta|style)[^>]*>.*?(?:</style>)?", "", body, flags=re.S | re.I)
     body = re.sub(r'\s(?:style|class|onmouseover|onmouseout|width|height)="[^"]*"', "", body)
-    body = re.sub(r"<img[^>]*>", "", body)
+    # 본문 안 그림: 그룹웨어(cimg)에서 받아 둔 파일(files/gw/img/)이 있으면 그것으로 바꾸고, 없으면 지움
+    def _img(m):
+        src = re.search(r"src=[\"']([^\"']+)", m.group(0))
+        if not src: return ""
+        name = src.group(1).split("?")[0].rsplit("/", 1)[-1]
+        if "/cimg/" in src.group(1) and os.path.exists(os.path.join(FILES, "img", name)):
+            return f'<img src="../../files/gw/img/{name}" alt="" style="max-width:100%;height:auto;display:block;margin:10px 0">'
+        return ""
+    body = re.sub(r"<img[^>]*>", _img, body, flags=re.I)
     body = re.sub(r"<a [^>]*JAVASCRIPT[^>]*>(.*?)</a>", r"\1", body, flags=re.S)
     return body.strip()
 
