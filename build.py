@@ -22,7 +22,7 @@ MENUS = [
         ("welfare", "조합원 복지"), ("join", "조합가입 안내"), ("location", "오시는 길"),
     ]),
     ("news", "소식마당", "노동조합의 소식과 알림을 전합니다", [
-        ("notice", "공지사항"), ("news", "노조소식"), ("statement", "성명서·보도자료"), ("othernews", "기타 노조 소식"),
+        ("notice", "공지사항"), ("news", "노조소식"), ("statement", "성명서·보도자료"), ("othernews", "기타 노조 소식"), ("calendar", "일정캘린더"),
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
         ("council", "노사협의회"), ("agreement", "단체협약"), ("rules", "규약·규정"), ("law", "노동관계법령"),
@@ -32,7 +32,7 @@ MENUS = [
         ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"), ("wish", "노조에 바란다"), ("vote", "조합원 투표"),
     ]),
     ("gri", "GRI", "경기연구원 관련 공개 자료", [
-        ("audit", "행정사무감사"), ("assembly", "경기도의회 회의록"), ("committee", "심의위원회"), ("director", "노동이사 활동보고"), ("budget", "예산결산서"), ("guide", "가이드라인"), ("regulations", "제규정"), ("regulation", "규정 및 지침"), ("calendar", "일정 달력"),
+        ("audit", "행정사무감사"), ("assembly", "경기도의회 회의록"), ("committee", "심의위원회"), ("director", "노동이사 활동보고"), ("budget", "예산결산서"), ("guide", "가이드라인"), ("regulations", "제규정"), ("regulation", "규정 및 지침"),
     ]),
 ]
 
@@ -85,9 +85,10 @@ def header(root, cur_sec=None):
         <span class="name"><strong>노동조합</strong><span>{SITE_EN}</span></span>
       </a>
     </h1>
-    <form class="search" action="{root}board/search.html" method="get">
-      <input type="search" name="q" placeholder="검색어를 입력하세요" aria-label="검색어">
-      <button type="submit" aria-label="검색">&#128269;</button>
+    <form class="search" action="{root}board/search.html" method="get" role="search">
+      <label for="hdrSearch">자료검색</label>
+      <input type="search" id="hdrSearch" name="q" placeholder="찾으시는 자료의 키워드를 입력하세요 (예: 단체협약, 회의록, 인사규정)" aria-label="검색어" autocomplete="off">
+      <button type="submit">&#128269; 검색</button>
     </form>
     <button class="menu-toggle" aria-label="메뉴 열기">&#9776;</button>
   </div>
@@ -360,10 +361,12 @@ def p_statement(root):
     """성명서·보도자료: 노조 게시글 + '경기연구원 노조' 키워드로 자동 수집된 언론 보도"""
     intro = ('<p>노동조합의 성명서·보도자료와, 빅카인즈(한국언론진흥재단)에서 <b>"경기연구원 노조"</b> 키워드로 매일 자동 수집되는 언론 보도입니다. '
              '뉴스 제목을 누르면 요약과 원문 링크가 표시됩니다.</p>')
-    return board(root, "성명서·보도자료", _news_rows(_news_items("statement"), root), intro, code="statement")
+    intro = ('<p>노동조합의 성명서·보도자료, 경기연구원 그룹웨어 <b>언론동향</b> 중 노조·노동조합·산하기관 관련 기사, 그리고 빅카인즈(한국언론진흥재단)에서 '
+             '<b>"경기연구원 노조"</b> 키워드로 매일 자동 수집되는 언론 보도입니다. 제목을 누르면 본문(또는 요약)과 원문 링크가 표시됩니다.</p>')
+    return board(root, "성명서·보도자료", gw_rows("statement", root) + _news_rows(_news_items("statement"), root), intro, code="statement", kwmap=gw_kwmap("statement"))
 def p_delegate(root):
     intro = ('<p>대의원대회·집행부 회의·노사협의 등 노동조합 회의의 안건, 회의록, 참고자료를 공유합니다. 승인된 조합원만 열람할 수 있습니다. '
-             f'<a href="{root}gri/calendar.html">일정 달력</a>에서 일정에 자료를 첨부하면 이 게시판에 자동으로 글이 올라갑니다.</p>')
+             f'<a href="{root}news/calendar.html">일정캘린더</a>에서 일정에 자료를 첨부하면 이 게시판에 자동으로 글이 올라갑니다.</p>')
     return board(root, "회의자료", None, intro, code="delegate")
 
 def p_wish(root):
@@ -466,8 +469,8 @@ def _gw_posts(code=None):
         posts = []
     return [p for p in posts if code is None or p["code"] == code]
 
-GW_DIR = {"committee": "gri/committee", "director": "gri/director", "council": "archive/council", "rules": "archive/rules", "news": "news/news", "budget": "gri/budget", "guide": "gri/guide", "documents": "archive/documents"}
-GW_NAME = {"committee": "심의위원회", "director": "노동이사 활동보고", "council": "노사협의회", "rules": "규약·규정", "news": "노조소식", "budget": "예산결산서", "guide": "가이드라인", "documents": "기타참고자료"}
+GW_DIR = {"committee": "gri/committee", "director": "gri/director", "council": "archive/council", "rules": "archive/rules", "news": "news/news", "budget": "gri/budget", "guide": "gri/guide", "documents": "archive/documents", "statement": "news/statement"}
+GW_NAME = {"committee": "심의위원회", "director": "노동이사 활동보고", "council": "노사협의회", "rules": "규약·규정", "news": "노조소식", "budget": "예산결산서", "guide": "가이드라인", "documents": "기타참고자료", "statement": "성명서·보도자료"}
 
 def gw_rows(code, root):
     posts = _gw_posts(code)
@@ -504,11 +507,12 @@ def gw_pages():
             atts = ""
             if p["atts"]:
                 atts = '<div class="attach box"><b>첨부파일</b><ul class="bul">' + "".join(
-                    f'<li><a href="../../{a["file"]}" download>&#128206; {_html.escape(a["name"])}</a> <span class="note">({a["size"]//1024:,} KB)</span>'
-                    + (f' · <a href="#att{k}" style="color:var(--primary)">본문 보기 ▼</a>' if a.get("text") else ' <span class="note">(스캔 문서: 텍스트 없음, 파일로 확인)</span>') + "</li>"
+                    ((f'<li><a href="../../{a["file"]}" download>&#128206; {_html.escape(a["name"])}</a> <span class="note">({a["size"]//1024:,} KB)</span>')
+                     if a.get("file") else f'<li>&#128206; {_html.escape(a["name"])} <span class="note">({a["size"]//1024//1024:,} MB · 용량이 커서 그룹웨어(gw.gri.re.kr)에서 내려받으세요)</span>')
+                    + (f' · <a href="#att{k}" style="color:var(--primary)">본문 보기 ▼</a>' if a.get("text") else ('' if "언론기사" in a["name"] else ' <span class="note">(스캔 문서: 텍스트 없음, 파일로 확인)</span>')) + "</li>"
                     for k, a in enumerate(p["atts"])) + "</ul></div>"
             att_text = "".join(
-                f'<section class="att-text" id="att{k}"><h4 class="rule-title" style="font-size:19px">&#128196; {_html.escape(a["name"])} <a href="../../{a["file"]}" download class="btn sm line" style="margin-left:8px">파일 내려받기</a></h4>'
+                f'<section class="att-text" id="att{k}"><h4 class="rule-title" style="font-size:19px">&#128196; {_html.escape(a["name"])} {("<a href=\"../../" + a["file"] + "\" download class=\"btn sm line\" style=\"margin-left:8px\">파일 내려받기</a>") if a.get("file") else ""}</h4>'
                 + (a.get("html") or "".join(f"<p>{_html.escape(line)}</p>" for line in a["text"].split("\n") if line.strip())) + "</section>"
                 for k, a in enumerate(p["atts"]) if a.get("text"))
             kw = _json.dumps(p.get("keywords") or {}, ensure_ascii=False)
@@ -808,7 +812,7 @@ PAGES = {
     ("about", "location"): p_location,
     ("news", "regulation"): p_regulation, ("news", "council"): p_council,
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
-    ("gri", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
+    ("news", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
     ("community", "staff"): p_staff, ("gri", "budget"): p_budget, ("gri", "guide"): p_guide, ("archive", "documents"): p_documents, ("news", "news"): p_news, ("gri", "director"): p_director, ("gri", "committee"): p_committee, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("community", "vote"): p_vote, ("news", "othernews"): p_othernews, ("news", "statement"): p_statement, ("gri", "audit"): p_audit, ("gri", "assembly"): p_assembly,
 }
@@ -862,16 +866,6 @@ def index():
   <div class="dots"></div>
 </section>
 
-<section class="searchband">
-  <div class="wrap">
-    <form action="board/search.html" method="get" role="search">
-      <label for="siteSearch">자료검색</label>
-      <input type="search" id="siteSearch" name="q" placeholder="찾으시는 자료의 키워드를 입력하세요 (예: 단체협약, 회의록, 인사규정)" autocomplete="off">
-      <button type="submit">&#128269; 검색</button>
-    </form>
-    <p class="hint">공지사항 · 규정 및 지침 · 노사협의회 · 단체협약 · 문서자료 등 모든 게시판을 한 번에 검색합니다.</p>
-  </div>
-</section>
 
 <div class="wrap">
   <div class="home-dash">
@@ -886,7 +880,7 @@ def index():
       </ul></nav>
       <div class="card gcal-upcoming" data-limit="6"><h4>다가오는 일정</h4><p class="note">불러오는 중…</p></div>
     </div>
-    <div class="card home-cal"><div class="gcal" data-upcoming=".gcal-upcoming" data-more="gri/calendar.html"></div></div>
+    <div class="card home-cal"><div class="gcal" data-upcoming=".gcal-upcoming" data-more="news/calendar.html"></div></div>
   </div>
 </div>
 
@@ -1023,14 +1017,14 @@ ADMIN = """
 ADMIN_MEMBERS = """
 <div id="adminPage" data-admin="members">
 %s
-<p class="note">가입한 회원이 조합원인지 확인한 뒤 <b>승인</b>하면 조합원 게시판 이용과 글쓰기가 가능해집니다. 성명·소속은 칸을 눌러 바로 수정하고 <b>저장</b>을 누르세요.</p>
+<p class="note">가입한 회원이 조합원인지 확인한 뒤 <b>구분</b>을 <b>회원</b> 또는 <b>관리자</b>로 고르고 <b>가입 승인</b>을 누르면 조합원 게시판 이용과 글쓰기가 가능해집니다(관리자는 회원 관리·일정·게시판 관리까지). 성명·소속·직급도 칸에서 바로 고친 뒤 <b>저장</b>을 누르세요.</p>
 <div class="admin-tools">
   <input type="search" id="memberSearch" placeholder="성명 · 이메일 · 소속 검색">
   <select id="memberFilter"><option value="all">전체</option><option value="pending">승인 대기</option><option value="approved">승인 조합원</option><option value="admin">관리자</option></select>
   <button class="btn line" id="memberCsv" type="button">CSV 내려받기</button>
   <span class="cnt" id="memberCount"></span>
 </div>
-<div style="overflow-x:auto"><table class="tbl" id="memberTbl"><thead><tr><th style="width:120px">성명</th><th>이메일</th><th style="width:150px">소속</th><th style="width:120px">직급</th><th style="width:100px">가입일</th><th style="width:90px">상태</th><th style="width:250px">관리</th></tr></thead><tbody><tr><td colspan="7">불러오는 중...</td></tr></tbody></table></div>
+<div style="overflow-x:auto"><table class="tbl" id="memberTbl"><thead><tr><th style="width:120px">성명</th><th>이메일</th><th style="width:150px">소속</th><th style="width:120px">직급</th><th style="width:100px">가입일</th><th style="width:90px">상태</th><th style="width:300px">구분 · 관리</th></tr></thead><tbody><tr><td colspan="7">불러오는 중...</td></tr></tbody></table></div>
 <p class="note" style="margin-top:12px">※ "탈퇴"는 홈페이지 회원 정보를 삭제하고 로그인 권한을 없앱니다. 로그인 계정 자체를 완전히 삭제하려면 Supabase 대시보드 &gt; Authentication &gt; Users 에서 삭제하세요.</p>
 </div>
 """ % admin_nav("members")

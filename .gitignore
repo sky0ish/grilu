@@ -3,3 +3,4 @@ __pycache__/
 *.zip
 desktop.ini
 data/gri_rules_files/
+*_Data/

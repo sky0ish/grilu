@@ -2,7 +2,7 @@
 """
 빅카인즈(bigkinds.or.kr) 뉴스 검색 결과를 가져와 data/othernews.json 에 누적 저장합니다.
 - 키워드: KEYWORDS (여러 개)
-- 저장 항목: 제목 · 언론사 · 날짜 · 원문 링크 · 요약(기사 앞부분 300자) · 검색 키워드
+- 저장 항목: 제목 · 언론사 · 날짜 · 원문 링크 · 요약(기사 앞부분 900자) · 검색 키워드
   (저작권상 기사 전문은 저장하지 않고 원문 링크로 연결합니다)
 - 실행: python tools/fetch_news.py [--days 30]
 - GitHub Actions(.github/workflows/news.yml) 가 매일 실행해 커밋합니다.
@@ -15,7 +15,7 @@ OUT = os.path.join(ROOT, "data", "othernews.json")
 KEYWORDS = ["경기도 산하기관 노조", "경기도 공공기관 노조", "경기연구원 노조"]
 DAYS = int(sys.argv[sys.argv.index("--days") + 1]) if "--days" in sys.argv else 30
 KEEP = 500          # 최대 보관 건수
-SUMMARY_LEN = 300
+SUMMARY_LEN = 900
 
 S = requests.Session()
 S.headers.update({

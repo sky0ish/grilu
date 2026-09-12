@@ -81,19 +81,20 @@
     var me = DB.user.id;
     tb.innerHTML = list.map(function (p) {
       var self = p.id === me;
+      var grade = p.role === 'admin' ? 'admin' : (p.approved ? 'member' : 'pending');
       return '<tr data-id="' + p.id + '">' +
         '<td><input class="inline" data-f="name" value="' + esc(p.name || '') + '"></td>' +
         '<td style="text-align:left">' + esc(p.email) + (self ? ' <span class="note">(나)</span>' : '') + '</td>' +
         '<td><input class="inline" data-f="dept" value="' + esc(p.dept || '') + '"></td>' +
         '<td><select class="inline" data-f="position">' + '<option value="">-</option>' + '<option' + (p.position === '선임연구위원' ? ' selected' : '') + '>선임연구위원</option>' + '<option' + (p.position === '연구위원' ? ' selected' : '') + '>연구위원</option>' + '<option' + (p.position === '선임연구원' ? ' selected' : '') + '>선임연구원</option>' + '<option' + (p.position === '연구원' ? ' selected' : '') + '>연구원</option>' + '<option' + (p.position === '행정직' ? ' selected' : '') + '>행정직</option>' + '</select></td>' +
         '<td>' + fmt(p.created_at) + '</td><td>' + statusBadge(p) + '</td>' +
-        '<td><button class="btn sm" data-act="save">저장</button> ' +
-        (self ? '' :
-          (p.role === 'admin'
-            ? '<button class="btn sm line" data-act="unadmin">관리자 해제</button> '
-            : '<button class="btn sm ' + (p.approved ? 'line' : '') + '" data-act="' + (p.approved ? 'revoke' : 'approve') + '">' + (p.approved ? '승인취소' : '승인') + '</button> ' +
-              '<button class="btn sm line" data-act="admin">관리자 지정</button> ') +
-          '<button class="btn sm danger" data-act="delete">탈퇴</button>') +
+        '<td>' + (self ? '<span class="note">본인</span> ' :
+          '<select class="inline" data-f="grade" style="width:auto" title="구분: 승인 대기 / 회원 / 관리자">' +
+            '<option value="pending"' + (grade === 'pending' ? ' selected' : '') + '>대기(미승인)</option>' +
+            '<option value="member"' + (grade === 'member' ? ' selected' : '') + '>회원</option>' +
+            '<option value="admin"' + (grade === 'admin' ? ' selected' : '') + '>관리자</option></select> ') +
+        '<button class="btn sm" data-act="save">' + (grade === 'pending' && !self ? '가입 승인' : '저장') + '</button> ' +
+        (self ? '' : '<button class="btn sm danger" data-act="delete">탈퇴</button>') +
         '</td></tr>';
     }).join('');
     tb.querySelectorAll('button').forEach(function (b) {
@@ -103,7 +104,13 @@
         var done = function (r) { if (r && r.error) alert('실패: ' + r.error.message); loadMembers(); };
         if (act === 'save') {
           var patch = { name: tr.querySelector('[data-f=name]').value.trim(), dept: tr.querySelector('[data-f=dept]').value.trim(), position: tr.querySelector('[data-f=position]').value || null };
-          return DB.client.from('profiles').update(patch).eq('id', id).then(function (r) { if (r.error) alert(r.error.message); else { b.textContent = '저장됨'; setTimeout(function () { b.textContent = '저장'; }, 1200); p.name = patch.name; p.dept = patch.dept; p.position = patch.position; } });
+          var gsel = tr.querySelector('[data-f=grade]'), g = gsel ? gsel.value : null, cur = p.role === 'admin' ? 'admin' : (p.approved ? 'member' : 'pending');
+          if (g && g !== cur) {
+            if (g === 'admin' && !confirm(p.email + ' 회원을 관리자로 지정할까요? (회원 관리·일정·게시판 관리 권한)')) return;
+            if (g === 'pending' && !confirm(p.email + ' 회원의 승인을 취소할까요?')) return;
+            patch.role = g === 'admin' ? 'admin' : 'member'; patch.approved = g !== 'pending';
+          }
+          return DB.client.from('profiles').update(patch).eq('id', id).then(function (r) { if (r.error) alert(r.error.message); else if (g && g !== cur) loadMembers(); else { b.textContent = '저장됨'; setTimeout(function () { b.textContent = '저장'; }, 1200); p.name = patch.name; p.dept = patch.dept; p.position = patch.position; } });
         }
         if (act === 'approve') return DB.client.from('profiles').update({ approved: true }).eq('id', id).then(done);
         if (act === 'revoke') { if (!confirm(p.email + ' 회원의 승인을 취소할까요?')) return; return DB.client.from('profiles').update({ approved: false }).eq('id', id).then(done); }

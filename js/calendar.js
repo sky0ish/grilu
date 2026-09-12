@@ -148,7 +148,7 @@
         var post = {
           board: MEET_BOARD, title: row.title + ' (' + row.date + ')',
           content: '<p><b>일시</b> ' + esc(dayLabel(row.date)) + (row.end_date ? ' ~ ' + esc(dayLabel(row.end_date)) : '') + (row.time ? ' ' + esc(row.time) : '') + (row.place ? ' &nbsp;|&nbsp; <b>장소</b> ' + esc(row.place) : '') + ' &nbsp;|&nbsp; <b>구분</b> ' + esc(TYPE[row.type][0]) + '</p>' +
-            (row.description ? '<div style="margin-top:10px">' + linkify(row.description) + '</div>' : '') + '<p class="note" style="margin-top:14px">※ 일정 달력에서 등록된 회의자료입니다.</p>',
+            (row.description ? '<div style="margin-top:10px">' + linkify(row.description) + '</div>' : '') + '<p class="note" style="margin-top:14px">※ 일정캘린더에서 등록된 회의자료입니다.</p>',
           attachments: row.attachments, updated_at: new Date().toISOString()
         };
         if (e.post_id) return DB.client.from('posts').update(post).eq('id', e.post_id).select('id').single().then(function (r) { return r.error ? DB.client.from('posts').insert(Object.assign({ author_id: DB.user.id, author_name: '관리자' }, post)).select('id').single() : r; });

@@ -10,6 +10,7 @@ import os, re, io, json, html, zipfile, tempfile, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ZIPS = sorted(__import__("glob").glob(os.path.join(ROOT, "data", "gw", "gw_export*.zip")))
 FILES = os.path.join(ROOT, "files", "gw")
+MAX_ATT = 15 * 1024 * 1024      # 이보다 큰 첨부(동영상 등)는 저장소에 넣지 않고 그룹웨어 안내만
 BOARD_MAP = {"000000371": ("committee", "심의위원회 상정(안)"), "0000001yl": ("rules", "노사협의회 운영규약"),
              "0000001ym": ("council", "공고 및 회의록"), "0000001yn": ("council", "안건 제안"), "0000001hy": ("director", "노동이사 활동보고"), "00000039t": ("budget", "예산결산서")}
 
@@ -210,7 +211,7 @@ def main():
       posts = json.loads(d["posts"]) if isinstance(d["posts"], str) else d["posts"]
       for p in posts:
           if p.get("cat"):
-              code, sub = p["cat"], {"budget": "예산결산서", "rules": "노사협의회 운영규약", "news": "단체교섭", "council": "공지(노사협의회)", "guide": p.get("boardName", "가이드라인")}.get(p["cat"], p["cat"])
+              code, sub = p["cat"], {"budget": "예산결산서", "rules": "노사협의회 운영규약", "news": "단체교섭", "council": "공지(노사협의회)", "guide": p.get("boardName", "가이드라인"), "documents": p.get("boardName", "참고자료"), "statement": p.get("boardName", "언론동향")}.get(p["cat"], p["cat"])
           elif p["board"] in BOARD_MAP:
               code, sub = BOARD_MAP[p["board"]]
           else:
@@ -229,10 +230,13 @@ def main():
               if "file" not in a: continue
               b = z.read("files/" + a["file"])
               safe = re.sub(r'[\\/:*?"<>|]', "_", a["file"])
-              open(os.path.join(FILES, safe), "wb").write(b)
-              text = clean_text(extract(a["name"], b))
+              too_big = len(b) > MAX_ATT
+              if not too_big: open(os.path.join(FILES, safe), "wb").write(b)
+              clip = "언론기사" in a["name"]                     # 언론 기사 스크랩(저작권): 파일만, 본문 전문은 싣지 않음
+              text = "" if clip else clean_text(extract(a["name"], b))[:300000]
               ahtml = extract_html(a["name"], b) if text else ""
-              rec["atts"].append({"name": a["name"], "file": "files/gw/" + safe, "size": len(b), "text": text, "html": ahtml})
+              if ahtml and len(ahtml) > 1500000: ahtml = ""
+              rec["atts"].append({"name": a["name"], "file": ("" if too_big else "files/gw/" + safe), "size": len(b), "text": text, "html": ahtml, "big": too_big})
               print(f"    - {a['name']} ({len(b)//1024} KB) → {len(text)}자")
           out.append(rec)
     out.sort(key=lambda r: (r["date"], r["id"]), reverse=True)

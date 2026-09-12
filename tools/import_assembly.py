@@ -86,6 +86,38 @@ def excerpt(body):
         out.extend(ps[a:b])
     return "\n".join(out), len(spans)
 
+TOPIC = re.compile(r"용역|연구|의뢰|출연금|예산|이전|원장|보고서|보고|지적|위탁|자료|평가|인력|과제|정원|통폐합|북부|수탁|검토|분석|조사|타당성|계획|설문|세미나|토론|협약|채용|성과|반영|추진|공청회|기금|감사|용역비|인건비|사업")
+FILLER = re.compile(r"^(그래서|그런데|그리고|그러니까|그러면|근데|이제|지금|좀|또|아까|사실|일단|예|네|아니|저기|우리|저희|본 위원이|제가)\s+")
+def summarize(html_body, n=48):
+    """경기연구원이 언급된 문장 중 정보가 많은 것을 골라 언급 부분 앞뒤를 짧게 잘라 제목 끝에 붙일 요약을 만든다"""
+    text = strip(html_body)
+    sents = [x.strip() for x in re.split(r"(?<=[.?!])\s+", text) if x.strip()]
+    sents = [x for x in sents if any(k in x for k in KEYS)]
+    if not sents: return ""
+    def score(x):
+        sc = len(set(TOPIC.findall(x))) * 2
+        if 20 <= len(x) <= 160: sc += 2
+        if x.startswith("○"): sc -= 1
+        if "감사합니다" in x or "입니다." == x[-4:] and len(x) < 25: sc -= 2
+        return sc
+    best = max(sents, key=score)
+    t = re.sub(r"^○\s*\S+(\s+\S+)?\s*(위원장|부위원장|위원|의원|국장|과장|실장|본부장|원장|부원장|지사|부지사|청장|처장|팀장|단장|담당관)?\s*", "", best).strip()
+    t = FILLER.sub("", t); t = FILLER.sub("", t)
+    m = next((re.search(k, t) for k in KEYS if re.search(k, t)), None)
+    if not m:
+        t = re.sub(r"^○\s*", "", best).strip()
+        m = next((re.search(k, t) for k in KEYS if re.search(k, t)), None)
+        if not m: return ""
+    i = m.start()
+    st = max(0, i - 22); en = min(len(t), i + n - (i - st))
+    seg = t[st:en]
+    if st > 0:
+        sp = seg.find(" "); seg = ("…" + seg[sp + 1:]) if 0 < sp < 12 else "…" + seg
+    if en < len(t):
+        sp = seg.rfind(" "); seg = (seg[:sp] if sp > len(seg) - 12 else seg) + "…"
+    seg = re.sub(r"[\s,]+…$", "…", seg).strip()
+    return seg
+
 def meta_of(rec, body):
     t = strip(body[:3000])
     sub = strip(rec["subject"])
@@ -108,7 +140,7 @@ def meta_of(rec, body):
             name = meeting
         title = f"인사청문회 _ {name} _ {date}"
     else:
-        title = f"경기도의회 회의록 _ {date} _ {meeting}"
+        title = f"{date} _ {meeting}"
     return date, meeting, kind, title
 
 def main():
@@ -142,9 +174,11 @@ def main():
         about = cnt >= FULL_MIN or (kind == "인사청문회" and "경기연구원" in title)
         ex, nspan = excerpt(body)
         shown = body if about else ex
+        summ = summarize(ex or body)
+        if summ: title = f"{title} _ {summ}"
         kw = extract(shown, speakers_of(shown), top=20)
         meta.append({"id": rec["id"], "gen": rec["gen"], "subject": rec["subject"], "meeting": meeting, "kind": kind, "date": date,
-                     "title": title, "n": cnt, "full": about, "url": f"{BASE}/cms/mntsViewer.do?mntsId={rec['id']}",
+                     "title": title, "s": summ, "n": cnt, "full": about, "url": f"{BASE}/cms/mntsViewer.do?mntsId={rec['id']}",
                      "k": [w for w, c, s_ in kw.get("top") or []]})
         json.dump({"html": shown, "keywords": kw, "spans": nspan}, open(os.path.join(BODY_DIR, rec["id"] + ".json"), "w", encoding="utf-8"), ensure_ascii=False)
         if n % 100 == 0: print(f"  {n}/{len(hits)} {title} (언급 {cnt}회{', 전문' if about else ''})", flush=True)

@@ -13,6 +13,8 @@ W, H = 2400, 900
 ph = H; pw = int(src.width * ph / src.height)          # 사진을 높이에 맞춤
 photo = src.resize((pw, ph), Image.LANCZOS)
 px = np.asarray(photo).astype(np.float32)
+CROP_L = 100                      # 맨 왼쪽 한 사람을 잘라내 이음새가 하늘 틈(사진 95~152px)에 오게
+px = px[:, CROP_L:, :]; pw = px.shape[1]; photo = Image.fromarray(px.astype(np.uint8))
 
 # 1) 왼쪽 하늘: 사진 왼쪽 90px 의 행별 중앙값(흰 낙서선 제거) → 세로로 부드럽게
 strip = np.median(px[:, :90, :], axis=1)                 # (H,3)
@@ -51,32 +53,43 @@ if ext is None or ext.shape[1] < x0:
     reps = int(np.ceil(x0 / pw)) + 1
     tiles = [mirror if k % 2 == 0 else med for k in range(reps)][::-1]
     ext = np.concatenate(tiles, axis=1)[:, -x0:, :]
-ext_img = Image.fromarray(np.clip(ext, 0, 255).astype(np.uint8))
-levels = [0, 6, 16, 34, 60]                                                      # 블러 반경 단계
-blurred = [ext.astype(np.float32)] + [np.asarray(ext_img.filter(ImageFilter.GaussianBlur(r))).astype(np.float32) for r in levels[1:]]
-d = (x0 - np.arange(x0, dtype=np.float32))                                      # 이음새로부터의 거리
-SHARP, SOFT = 300.0, 1050.0                                                      # 300px 까지 선명, 그 뒤 문구 자리부터 서서히 흐려짐
-u = np.clip((d - SHARP) / (SOFT - SHARP), 0, 1); u = u * u * (3 - 2 * u)
-pos = u * (len(levels) - 1)
-lo = np.floor(pos).astype(int); hi = np.minimum(lo + 1, len(levels) - 1); fr = (pos - lo)[None, :, None]
-ext_sky = np.zeros_like(ext)
-for k in range(len(levels)):
-    wk = np.where(lo == k, 1 - fr[0, :, 0], 0) + np.where(hi == k, fr[0, :, 0], 0)
-    ext_sky += blurred[k] * wk[None, :, None]
+ext_sky = ext.astype(np.float32)
 # 사람들 높이(아래쪽) 행은 반전 사진에 사람이 비치므로 합성 하늘을 쓰고, 그 위 행은 반전 사진 하늘을 쓴다 (세로로 부드럽게 전환)
 ty = np.clip((np.arange(H, dtype=np.float32) - 440) / 70.0, 0, 1)[:, None, None]; ty = ty * ty * (3 - 2 * ty)
+# 사람 높이 행: 사진 왼쪽 가장자리(사람 앞의 구름·지면 44px)를 좌우 반전 타일로 이어 붙여 같은 결을 만든 뒤 블러 램프로 녹인다
+strip_w = 50
+stripL = px[:, :strip_w, :]
+tiles = []; k = 0
+while sum(t.shape[1] for t in tiles) < x0:
+    tiles.append(stripL[:, ::-1, :] if k % 2 == 0 else stripL); k += 1
+ext_low = np.concatenate(tiles[::-1], axis=1)[:, -x0:, :]
 canvas = sky.copy()
-canvas[:, :x0, :] = ext_sky * (1 - ty) + sky[:, :x0, :] * ty
+canvas[:, :x0, :] = ext_sky                                        # 전 구간 좌우 반전 사진(사람 포함) → 강한 블러로 초점 밖 배경처럼
 # 이음새: 하늘 부분은 짧게(80px), 사람들이 있는 아랫부분도 좁게(60px) 섞어 연결
 alpha = np.ones((ph, pw), np.float32)
 xs = np.arange(pw, dtype=np.float32)
 for y in range(ph):
     t = min(1.0, max(0.0, (y - 420) / 100.0))
-    fw = 80 * (1 - t) + 60 * t
+    fw = 80 * (1 - t) + 48 * t
     a = np.clip(xs / fw, 0, 1)
     alpha[y] = a * a * (3 - 2 * a)
 alpha = alpha[..., None]
 canvas[:, x0:, :] = canvas[:, x0:, :] * (1 - alpha) + px * alpha
+
+# 3-2) 전체 화면에 가로 방향 블러 램프: 오른쪽(사람·낙서)은 선명, 문구가 나오는 자리(x≈1000)부터 왼쪽으로 갈수록 뿌옇게.
+#      이음새(x0)가 램프 안에 들어가므로 경계선이 보이지 않는다.
+base = np.clip(canvas, 0, 255).astype(np.uint8); base_img = Image.fromarray(base)
+levels = [0, 5, 12, 24, 40, 60, 80]
+blurred = [base.astype(np.float32)] + [np.asarray(base_img.filter(ImageFilter.GaussianBlur(r))).astype(np.float32) for r in levels[1:]]
+xs_all = np.arange(W, dtype=np.float32)
+SHARP_X, SOFT_X = float(x0 + 420), 900.0            # 이 x 보다 오른쪽은 선명, 950px 에서 완전 블러
+u = np.clip((SHARP_X - xs_all) / (SHARP_X - SOFT_X), 0, 1); u = u * u * (3 - 2 * u)
+pos = u * (len(levels) - 1); lo = np.floor(pos).astype(int); hi = np.minimum(lo + 1, len(levels) - 1); fr = pos - lo
+mixed = np.zeros_like(canvas)
+for k in range(len(levels)):
+    wk = np.where(lo == k, 1 - fr, 0) + np.where(hi == k, fr, 0)
+    mixed += blurred[k] * wk[None, :, None]
+canvas = mixed
 
 # 4) 지면(어두운 언덕)을 왼쪽까지 이어서 사람들 발밑 선이 끊기지 않게
 ground_row = px[-1, :60, :].mean(axis=0)              # 사진 맨 아래 왼쪽 색

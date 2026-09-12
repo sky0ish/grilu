@@ -71,7 +71,7 @@
         '<span class="badge" style="font-size:12px;color:#fff;background:var(--primary);padding:2px 8px;border-radius:4px">' + esc(n.provider) + '</span>' +
         '<h4 style="border:0;padding:0;margin:8px 0 6px;color:#222;font-size:24px">' + esc(n.title) + '</h4>' +
         '<div class="note">' + esc(n.provider) + (n.byline ? ' · ' + esc(n.byline) : '') + ' &nbsp;|&nbsp; ' + esc(n.date) + ' &nbsp;|&nbsp; 검색 키워드: ' + esc((n.keywords || []).join(', ')) + '</div></div>' +
-        '<div class="post-body" style="line-height:1.9;font-size:16px"><p>' + esc(n.summary) + (n.summary && n.summary.length >= 290 ? '…' : '') + '</p>' +
+        '<div class="post-body" style="line-height:1.9;font-size:16px"><p>' + esc(n.summary) + (n.summary && n.summary.length >= 890 ? '…' : '') + '</p>' +
         '<p style="margin-top:20px"><a href="' + esc(n.url) + '" target="_blank" rel="noopener" class="btn">기사 원문 보기 (' + esc(n.provider) + ')</a></p>' +
         '<p class="note" style="margin-top:20px">※ 저작권 보호를 위해 기사 앞부분만 표시합니다. 전문은 언론사 원문 링크에서 확인하세요. 출처: 빅카인즈(한국언론진흥재단)</p></div>' +
         '<table class="tbl" style="margin-top:24px">' +
@@ -89,7 +89,7 @@
     Promise.all([loadNews(), dbq]).then(function (res) {
       var items = (res[0] || []).filter(function (n) { return newsBoard(n) === code; }).map(function (n) { return { link: newsUrl(n.id), html: esc(n.title) + ' <span class="note">[' + esc(n.provider) + ']</span>', raw: n.title + ' ' + n.summary, writer: '뉴스', date: n.date, hit: '-', notice: false }; });
       ((res[1] && res[1].data) || []).forEach(function (p) {
-        items.push({ link: viewUrl(p.id), html: esc(p.title) + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : ''), raw: p.title, writer: p.author_name || '', date: fmt(p.created_at), hit: p.views, notice: p.is_notice });
+        items.push({ link: viewUrl(p.id), html: esc(p.title) + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</a>' + adminBtns(p, code) + '<a>', raw: p.title, writer: p.author_name || '', date: fmt(p.created_at), hit: p.views, notice: p.is_notice });
       });
       if (q) items = items.filter(function (x) { return (f === 'author' ? x.writer : f === 'content' ? x.raw : x.raw.split(' ')[0] + x.raw).indexOf(q) >= 0; });
       items.sort(function (a, b) { return (b.notice - a.notice) || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0); });
@@ -290,7 +290,7 @@
           var tbody = tbl.querySelector('tbody'); var total = r.data.length;
           tbody.innerHTML = r.data.map(function (p, i) {
             var lg = (p.attachments && p.attachments.legacy_id) ? ' data-legacy="' + esc(p.attachments.legacy_id) + '"' : '';
-            return '<tr' + lg + '><td class="num">' + (total - i) + '</td><td class="tit"><a href="' + viewUrl(p.id) + '">' + esc(p.title) + '</a>' + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</td><td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td><td class="hit">' + p.views + '</td></tr>';
+            return '<tr' + lg + '><td class="num">' + (total - i) + '</td><td class="tit"><a href="' + viewUrl(p.id) + '">' + esc(p.title) + '</a>' + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + adminBtns(p, code) + '</td><td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td><td class="hit">' + p.views + '</td></tr>';
           }).join('');
           apply();
         });
@@ -299,6 +299,19 @@
     });
   }
   bindBoardKw();
+
+  // 관리자용 목록 행 수정/삭제 버튼 (DB 글만)
+  function adminBtns(p, code) {
+    if (!(DB.ready && DB.isAdmin && DB.isAdmin()) || !p || !p.id) return '';
+    return '<span class="row-adm"><a href="' + writeUrl(code || p.board, p.id) + '" class="btn xs line" title="수정">수정</a><a href="#" class="btn xs" data-del="' + p.id + '" style="background:#c33" title="삭제">삭제</a></span>';
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('a[data-del]'); if (!a) return;
+    e.preventDefault(); var id = a.getAttribute('data-del');
+    var tr = a.closest('tr'); var title = tr ? (tr.querySelector('.tit a') || {}).textContent : '';
+    if (!confirm('이 글을 삭제할까요? ' + (title || '').trim().slice(0, 60))) return;
+    DB.client.from('posts').delete().eq('id', id).then(function (r) { if (r.error) return alert('삭제 실패: ' + r.error.message); if (tr) tr.remove(); else location.reload(); });
+  });
 
   // ---------- 목록 ----------
   function renderList() {
@@ -367,7 +380,7 @@
           return '<tr' + lg + (p.is_notice ? ' style="background:#f8f9fd"' : '') + '><td class="num">' + num + '</td>' +
             '<td class="tit"><a href="' + viewUrl(p.id) + '">' + esc(p.title) + '</a>' +
             (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') +
-            (isNew(p.created_at) ? ' <span class="badge new" style="font-size:11px;color:#fff;background:#e5533c;padding:1px 6px;border-radius:3px">N</span>' : '') +
+            (isNew(p.created_at) ? ' <span class="badge new" style="font-size:11px;color:#fff;background:#e5533c;padding:1px 6px;border-radius:3px">N</span>' : '') + adminBtns(p, code) +
             '</td><td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td><td class="hit">' + p.views + '</td></tr>';
         }).join('');
       }
@@ -398,7 +411,7 @@
           var snip = it ? snippet(it.x, q, 60) : '';
           return '<tr' + lg + '><td class="num">' + (total - from - i) + '</td><td class="tit"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + esc(p.title) + '</a>' +
             (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') +
-            (snip ? '<div class="kw-snips"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + esc(snip).split(esc(q)).join('<mark style="background:#fff2a8;padding:0 2px">' + esc(q) + '</mark>') + '</a></div>' : '') +
+            (snip ? '<div class="kw-snips"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + esc(snip).split(esc(q)).join('<mark style="background:#fff2a8;padding:0 2px">' + esc(q) + '</mark>') + '</a></div>' : '') + adminBtns(p, code) +
             '</td><td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td><td class="hit">' + p.views + '</td></tr>';
         }).join('') : '<tr><td colspan="5" style="padding:40px;color:#888">"' + esc(q) + '"이(가) 들어간 글이 없습니다.</td></tr>';
         renderPaging(total, page, q);
