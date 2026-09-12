@@ -50,6 +50,8 @@
   // ---------- 회원관리 ----------
   var members = [];
   var TABS = [['pending', '승인 대기'], ['approved', '회원'], ['associate', '준회원'], ['admin', '관리자'], ['all', '전체']];
+  /* 직급 구분 — 가입 화면(build.py)과 같게 */
+  var POSITIONS = ['선임연구위원', '연구위원', '공무직_연구원', '공무직_행정원', '행정관리직', '계약직_연구직', '계약직_공무직'];
   function initMembers() {
     var q = new URLSearchParams(location.search);
     var filter = document.getElementById('memberFilter');
@@ -201,14 +203,13 @@
         '<td><input class="inline" data-f="name" value="' + esc(p.name || '') + '"></td>' +
         '<td style="text-align:left">' + esc(p.email) + (self ? ' <span class="note">(나)</span>' : '') + '</td>' +
         '<td><input class="inline" data-f="dept" value="' + esc(p.dept || '') + '"></td>' +
-        '<td><select class="inline" data-f="position">' + '<option value="">-</option>' + '<option' + (p.position === '선임연구위원' ? ' selected' : '') + '>선임연구위원</option>' + '<option' + (p.position === '연구위원' ? ' selected' : '') + '>연구위원</option>' + '<option' + (p.position === '선임연구원' ? ' selected' : '') + '>선임연구원</option>' + '<option' + (p.position === '연구원' ? ' selected' : '') + '>연구원</option>' + '<option' + (p.position === '행정직' ? ' selected' : '') + '>행정직</option>' + '</select></td>' +
+        '<td><select class="inline" data-f="position">' + '<option value="">-</option>' + POSITIONS.map(function (x) { return '<option' + (p.position === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + (p.position && POSITIONS.indexOf(p.position) < 0 ? '<option selected>' + esc(p.position) + '</option>' : '') + '</select></td>' +
         '<td>' + fmt(p.created_at) + '</td><td>' + statusBadge(p) + '</td>' +
         '<td>' + (self ? '<span class="note">본인</span> ' :
-          '<select class="inline" data-f="grade" style="width:auto" title="구분: 승인 대기 / 회원 / 준회원 / 관리자">' +
-            '<option value="pending"' + (grade === 'pending' ? ' selected' : '') + '>대기(미승인)</option>' +
-            '<option value="member"' + (grade === 'member' ? ' selected' : '') + '>회원</option>' +
-            '<option value="associate"' + (grade === 'associate' ? ' selected' : '') + '>준회원</option>' +
-            '<option value="admin"' + (grade === 'admin' ? ' selected' : '') + '>관리자</option></select> ') +
+          '<select class="inline" data-f="grade" style="width:auto" title="관리구분: 관리자 / 회원 / 준회원 — 대기자는 골라서 「가입 승인」">' +
+            '<option value="admin"' + (grade === 'admin' ? ' selected' : '') + '>관리자</option>' +
+            '<option value="member"' + (grade === 'member' || grade === 'pending' ? ' selected' : '') + '>회원</option>' +
+            '<option value="associate"' + (grade === 'associate' ? ' selected' : '') + '>준회원</option></select> ') +
         '<button class="btn sm" data-act="save">' + (grade === 'pending' && !self ? '가입 승인' : '저장') + '</button> ' +
         /* 고르개를 거치지 않고 한 번에 — 「내가 회원에서 관리자로 올릴 수 있게」 */
         (self ? '' : grade === 'member' ? '<button class="btn line sm" data-act="associate">준회원으로</button> <button class="btn line sm" data-act="admin">관리자로</button> <button class="btn line sm" data-act="revoke">승인 취소</button> '
@@ -227,8 +228,7 @@
           var gsel = tr.querySelector('[data-f=grade]'), g = gsel ? gsel.value : null, cur = gradeOf(p);
           if (g && g !== cur) {
             if (g === 'admin' && !confirm(p.email + ' 회원을 관리자로 지정할까요? (회원 관리·일정·게시판 관리 권한)')) return;
-            if (g === 'pending' && !confirm(p.email + ' 회원의 승인을 취소할까요?')) return;
-            patch.role = g === 'admin' ? 'admin' : g === 'associate' ? 'associate' : 'member'; patch.approved = g !== 'pending';
+            patch.role = g === 'admin' ? 'admin' : g === 'associate' ? 'associate' : 'member'; patch.approved = true;
           }
           return DB.client.from('profiles').update(patch).eq('id', id).then(function (r) { if (r.error) alert(r.error.message); else if (g && g !== cur) loadMembers(); else { b.textContent = '저장됨'; setTimeout(function () { b.textContent = '저장'; }, 1200); p.name = patch.name; p.dept = patch.dept; p.position = patch.position; } });
         }
