@@ -1,4 +1,4 @@
-name: 구글 캘린더 [GRILU] 일정 수집
+name: 구글 캘린더 [GRILU] 동기화
 
 on:
   schedule:
@@ -16,11 +16,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install requests
-      - name: iCal 공개 주소에서 일정 수집 (2026-09 이후)
+      - run: pip install requests cryptography
+      - name: 양방향 동기화 (서비스 계정 키가 있을 때) — 홈페이지 일정 → GRILU 캘린더, GRILU 캘린더 → 홈페이지
         env:
+          GCAL_SA_JSON: ${{ secrets.GCAL_SA_JSON }}
+        run: python tools/sync_gcal.py
+      - name: 서비스 계정 키가 없으면 공개 iCal 주소로 읽기만
+        if: ${{ !env.HAS_SA }}
+        env:
+          HAS_SA: ${{ secrets.GCAL_SA_JSON != '' }}
           GRILU_ICS_URL: ${{ vars.GRILU_ICS_URL }}
-        run: python tools/fetch_gcal.py
+        run: |
+          if [ "$HAS_SA" != "true" ]; then python tools/fetch_gcal.py; fi
       - name: 변경 시에만 커밋
         run: |
           if git diff --quiet -- data/gcal.json; then echo "변경 없음"; exit 0; fi

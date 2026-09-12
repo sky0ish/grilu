@@ -8,7 +8,7 @@
 <link rel="icon" href="../images/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/style.css?v=202609121205">
+<link rel="stylesheet" href="../css/style.css?v=202609121328">
 </head>
 <body data-root="../">
 
@@ -51,11 +51,9 @@
     <h3 class="page-title">일정캘린더</h3>
     
 <p>노동조합 일정입니다. 관리자는 날짜를 눌러 일정을 추가·수정할 수 있고, 회의록·참고자료를 첨부하면 <a href="../archive/delegate.html">자료마당 &gt; 회의자료</a> 게시판에 자동으로 글이 올라갑니다.
-파일은 <b>끌어다 놓기</b>, <b>캡처 붙여넣기(Ctrl+V)</b>, <b>파일 선택</b> 모두 가능합니다. 구글 캘린더 [GRILU]의 일정(2026년 9월 이후)은 30분마다 자동으로 가져옵니다.</p>
-<div class="cal-page">
-  <div class="card"><div class="gcal gcal-big" data-upcoming=".gcal-upcoming"></div></div>
-  <div class="card gcal-upcoming" data-limit="12"><h4>다가오는 일정</h4><p class="note">불러오는 중…</p></div>
-</div>
+파일은 <b>끌어다 놓기</b>, <b>캡처 붙여넣기(Ctrl+V)</b>, <b>파일 선택</b> 모두 가능합니다. 관리자가 <b>구글 캘린더 [GRILU] 잇기</b>를 누르면(구글 권한 요청 창) 홈페이지 일정이 누가 썼든 모두 구글 캘린더 [GRILU]에 들어가고, [GRILU]의 다른 일정도 여기에 표시됩니다.</p>
+<div class="card"><div class="gcal gcal-big" data-upcoming=".gcal-upcoming"></div></div>
+<div class="card gcal-upcoming" data-limit="10"><h4>다가오는 일정</h4><p class="note">불러오는 중…</p></div>
 
   </main>
 </div>
@@ -91,13 +89,14 @@
 </footer>
 <button class="totop" aria-label="맨 위로">&#8679;</button>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="../js/config.js?v=202609121205"></script>
-<script src="../js/events.js?v=202609121205"></script>
-<script src="../js/db.js?v=202609121205"></script>
-<script src="../js/main.js?v=202609121205"></script>
-<script src="../js/calendar.js?v=202609121205"></script>
-<script src="../js/board.js?v=202609121205"></script>
-<script src="../js/auth.js?v=202609121205"></script>
-<script src="../js/admin.js?v=202609121205"></script>
+<script src="../js/config.js?v=202609121328"></script>
+<script src="../js/events.js?v=202609121328"></script>
+<script src="../js/db.js?v=202609121328"></script>
+<script src="../js/main.js?v=202609121328"></script>
+<script src="../js/gcal.js?v=202609121328"></script>
+<script src="../js/calendar.js?v=202609121328"></script>
+<script src="../js/board.js?v=202609121328"></script>
+<script src="../js/auth.js?v=202609121328"></script>
+<script src="../js/admin.js?v=202609121328"></script>
 </body>
 </html>

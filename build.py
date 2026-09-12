@@ -133,6 +133,7 @@ def footer(root):
 <script src="{root}js/events.js?v={VER}"></script>
 <script src="{root}js/db.js?v={VER}"></script>
 <script src="{root}js/main.js?v={VER}"></script>
+<script src="{root}js/gcal.js?v={VER}"></script>
 <script src="{root}js/calendar.js?v={VER}"></script>
 <script src="{root}js/board.js?v={VER}"></script>
 <script src="{root}js/auth.js?v={VER}"></script>
@@ -202,7 +203,7 @@ def board(root, name, rows=None, intro="", extra_btn="", code="", kwmap=None):
     intro = board_kw_block(kwmap, embed=(code != "assembly")) + intro
     return f"""
 {intro}
-<!--SEARCH--><form class="board-search" onsubmit="return false"><select name="f"><option value="title">제목</option><option value="content">내용</option><option value="author">작성자</option></select><input type="search" name="q" placeholder="검색어를 입력하세요"><button type="submit" class="in-board" title="이 게시판 안에서만 검색">게시판내 검색</button><button type="button" class="all-site line" title="홈페이지 전체 검색">전체 검색</button></form><!--/SEARCH-->
+<!--SEARCH--><form class="board-search" onsubmit="return false"><select name="f"><option value="all">제목+본문</option><option value="title">제목</option><option value="content">본문·첨부</option><option value="author">작성자</option></select><input type="search" name="q" placeholder="키워드를 넣으면 그 내용을 다룬 글을 찾아 노란색으로 표시합니다"><button type="submit" class="in-board" title="이 게시판 안에서만 검색">게시판내 검색</button><button type="button" class="all-site line" title="홈페이지 전체 검색">전체 검색</button></form><!--/SEARCH-->
 <div class="board-top">
   <span>전체 <b class="total">{len(rows)}</b>건</span>
 </div>
@@ -718,11 +719,9 @@ def p_video(root):
 def p_calendar(root):
     return f"""
 <p>노동조합 일정입니다. 관리자는 날짜를 눌러 일정을 추가·수정할 수 있고, 회의록·참고자료를 첨부하면 <a href="{root}archive/delegate.html">자료마당 &gt; 회의자료</a> 게시판에 자동으로 글이 올라갑니다.
-파일은 <b>끌어다 놓기</b>, <b>캡처 붙여넣기(Ctrl+V)</b>, <b>파일 선택</b> 모두 가능합니다. 구글 캘린더 [GRILU]의 일정(2026년 9월 이후)은 30분마다 자동으로 가져옵니다.</p>
-<div class="cal-page">
-  <div class="card"><div class="gcal gcal-big" data-upcoming=".gcal-upcoming"></div></div>
-  <div class="card gcal-upcoming" data-limit="12"><h4>다가오는 일정</h4><p class="note">불러오는 중…</p></div>
-</div>
+파일은 <b>끌어다 놓기</b>, <b>캡처 붙여넣기(Ctrl+V)</b>, <b>파일 선택</b> 모두 가능합니다. 관리자가 <b>구글 캘린더 [GRILU] 잇기</b>를 누르면(구글 권한 요청 창) 홈페이지 일정이 누가 썼든 모두 구글 캘린더 [GRILU]에 들어가고, [GRILU]의 다른 일정도 여기에 표시됩니다.</p>
+<div class="card"><div class="gcal gcal-big" data-upcoming=".gcal-upcoming"></div></div>
+<div class="card gcal-upcoming" data-limit="10"><h4>다가오는 일정</h4><p class="note">불러오는 중…</p></div>
 """
 
 def p_counsel(root):

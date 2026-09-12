@@ -84,14 +84,15 @@
   // 기타 노조 소식 목록: 자동 수집 뉴스 + 관리자 작성글 병합
   function renderNewsList(tbl, code) {
     var tbody = tbl.querySelector('tbody');
-    var page = parseInt(DB.qs('page') || '1', 10), q = (DB.qs('q') || '').trim(), f = DB.qs('f') || 'title';
+    var page = parseInt(DB.qs('page') || '1', 10), q = (DB.qs('q') || '').trim(), f = DB.qs('f') || 'all';
     var dbq = DB.client.from('posts').select('id,title,author_name,created_at,views,is_notice,attachments').eq('board', code).order('created_at', { ascending: false }).limit(300);
     Promise.all([loadNews(), dbq]).then(function (res) {
-      var items = (res[0] || []).filter(function (n) { return newsBoard(n) === code; }).map(function (n) { return { link: newsUrl(n.id), html: esc(n.title) + ' <span class="note">[' + esc(n.provider) + ']</span>', raw: n.title + ' ' + n.summary, writer: '뉴스', date: n.date, hit: '-', notice: false }; });
+      var items = (res[0] || []).filter(function (n) { return newsBoard(n) === code; }).map(function (n) { return { title: n.title, link: newsUrl(n.id), html: esc(n.title) + ' <span class="note">[' + esc(n.provider) + ']</span>', raw: n.title + ' ' + n.summary, writer: '뉴스', date: n.date, hit: '-', notice: false }; });
       ((res[1] && res[1].data) || []).forEach(function (p) {
-        items.push({ link: viewUrl(p.id), html: esc(p.title) + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</a>' + adminBtns(p, code) + '<a>', raw: p.title, writer: p.author_name || '', date: fmt(p.created_at), hit: p.views, notice: p.is_notice });
+        items.push({ title: p.title, link: viewUrl(p.id), html: esc(p.title) + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</a>' + adminBtns(p, code) + '<a>', raw: p.title, writer: p.author_name || '', date: fmt(p.created_at), hit: p.views, notice: p.is_notice });
       });
-      if (q) items = items.filter(function (x) { return (f === 'author' ? x.writer : f === 'content' ? x.raw : x.raw.split(' ')[0] + x.raw).indexOf(q) >= 0; });
+      if (q) items = items.filter(function (x) { return (f === 'author' ? x.writer : f === 'title' ? x.title : x.raw).indexOf(q) >= 0; });
+      if (q && f !== 'author') items.forEach(function (x) { x.html = x.html.split(esc(q)).join('<mark style="background:#fff2a8;padding:0 2px">' + esc(q) + '</mark>'); });
       items.sort(function (a, b) { return (b.notice - a.notice) || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0); });
       var total = items.length, from = (page - 1) * PAGE;
       var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = total;
@@ -116,7 +117,7 @@
     var sel = form.querySelector('select'); if (sel && f) sel.value = f;
     form.onsubmit = function () {
       var v = inp.value.trim(); if (!v) { inp.focus(); return false; }
-      location.href = listUrl(code) + '?q=' + encodeURIComponent(v) + (sel && sel.value !== 'title' ? '&f=' + sel.value : ''); return false;
+      location.href = listUrl(code) + '?q=' + encodeURIComponent(v) + (sel && sel.value !== 'all' ? '&f=' + sel.value : ''); return false;
     };
     var all = form.querySelector('.all-site');
     if (all) all.onclick = function () { var v = inp.value.trim(); if (!v) { inp.focus(); return; } location.href = DB.root + 'board/search.html?q=' + encodeURIComponent(v); };
@@ -131,22 +132,23 @@
   }
   function renderAssemblyList(tbl, code) {
     var tbody = tbl.querySelector('tbody');
-    var page = parseInt(DB.qs('page') || '1', 10), q = (DB.qs('q') || '').trim(), f = DB.qs('f') || 'title', kw = (DB.qs('kw') || '').trim();
-    var need = ((q && f === 'content') || kw) ? loadIndex() : Promise.resolve(null);
+    var page = parseInt(DB.qs('page') || '1', 10), q = (DB.qs('q') || '').trim(), f = DB.qs('f') || 'all', kw = (DB.qs('kw') || '').trim();
+    var need = ((q && f !== 'title' && f !== 'author') || kw) ? loadIndex() : Promise.resolve(null);
     Promise.all([loadAssembly(), need]).then(function (res) {
       var items = res[0] || [], idx = res[1];
       if (q) {
         if (f === 'author') items = items.filter(function () { return '경기도의회'.indexOf(q) >= 0; });
-        else if (f === 'content') { var ok = {}; (idx || []).forEach(function (x) { if (x.l.indexOf('asm-') === 0 && (x.x.indexOf(q) >= 0 || x.t.indexOf(q) >= 0)) ok[x.l.slice(4)] = 1; }); items = items.filter(function (x) { return ok[x.id]; }); }
+        else if (f === 'content' || f === 'all') { var ok = {}; (idx || []).forEach(function (x) { if (x.l.indexOf('asm-') === 0 && (x.x.indexOf(q) >= 0 || x.t.indexOf(q) >= 0)) ok[x.l.slice(4)] = 1; }); items = items.filter(function (x) { return ok[x.id] || (x.title + ' ' + x.subject).indexOf(q) >= 0; }); }
         else items = items.filter(function (x) { return (x.title + ' ' + x.subject).indexOf(q) >= 0; });
       }
       if (kw) items = items.filter(function (x) { return (x.k || []).indexOf(kw) >= 0; });
       var total = items.length, from = (page - 1) * PAGE, slice = items.slice(from, from + PAGE);
       var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = total + (kw ? ' (키워드 "' + kw + '")' : '');
       tbody.innerHTML = slice.length ? slice.map(function (x, i) {
-        var href = DB.root + 'gri/assembly/' + x.id + '.html' + (kw ? '?kw=' + encodeURIComponent(kw) : (q && f === 'content' ? '?kw=' + encodeURIComponent(q) : ''));
+        var href = DB.root + 'gri/assembly/' + x.id + '.html' + (kw ? '?kw=' + encodeURIComponent(kw) : (q && f !== 'author' ? '?kw=' + encodeURIComponent(q) : ''));
+        var ttl = esc(x.title); if (q && f !== 'author') ttl = ttl.split(esc(q)).join('<mark style="background:#fff2a8;padding:0 2px">' + esc(q) + '</mark>');
         return '<tr data-legacy="asm-' + esc(x.id) + '"><td class="num">' + (total - from - i) + '</td>' +
-          '<td class="tit"><a href="' + href + '">' + esc(x.title) + '</a> <span class="note">' + esc(x.kind) + ' · 언급 ' + x.n + '회' + (x.full ? ' · 전문' : '') + '</span></td>' +
+          '<td class="tit"><a href="' + href + '">' + ttl + '</a> <span class="note">' + esc(x.kind) + ' · 언급 ' + x.n + '회' + (x.full ? ' · 전문' : '') + '</span></td>' +
           '<td class="writer">경기도의회</td><td class="date">' + esc(x.date) + '</td><td class="hit">-</td></tr>';
       }).join('') : '<tr><td colspan="5" style="padding:40px;color:#888">해당하는 회의록이 없습니다.</td></tr>';
       renderPaging(total, page, q);
@@ -322,9 +324,9 @@
     if (code === 'assembly') return renderAssemblyList(tbl, code);
     var tbody = tbl.querySelector('tbody');
     var page = parseInt(DB.qs('page') || '1', 10);
-    var q = DB.qs('q') || '', f = DB.qs('f') || 'title';
+    var q = DB.qs('q') || '', f = DB.qs('f') || 'all';
     var from = (page - 1) * PAGE, to = from + PAGE - 1;
-    if (q && f === 'content') return renderContentSearch(tbl, code, q, page);
+    if (q && (f === 'content' || f === 'all')) return renderContentSearch(tbl, code, q, page, f);
 
     var query = DB.client.from('posts').select('id,title,author_name,created_at,views,is_notice,attachments', { count: 'exact' })
       .eq('board', code).order('is_notice', { ascending: false }).order('created_at', { ascending: false }).range(from, to);
@@ -391,12 +393,14 @@
     bindBoardSearch(code, q, f);
   }
   // 게시판내 '내용' 검색: DB 본문(ilike) + 전문 색인(이관 글의 본문·첨부 전문)을 합쳐 검색
-  function renderContentSearch(tbl, code, q, page) {
+  function renderContentSearch(tbl, code, q, page, f) {
     var tbody = tbl.querySelector('tbody'), bname = boardName(code);
     var sel = 'id,title,author_name,created_at,views,is_notice,attachments';
+    var hl = function (t) { return esc(t).split(esc(q)).join('<mark style="background:#fff2a8;padding:0 2px">' + esc(q) + '</mark>'); };
+    var qq = q.replace(/[,()]/g, ' ');
     loadIndex().then(function (idx) {
       var ids = idx.filter(function (x) { return x.b === bname && (x.x.indexOf(q) >= 0 || x.t.indexOf(q) >= 0); }).map(function (x) { return x.l; });
-      var q1 = DB.client.from('posts').select(sel).eq('board', code).ilike('content', '%' + q + '%').order('created_at', { ascending: false }).limit(300);
+      var q1 = DB.client.from('posts').select(sel).eq('board', code).or('content.ilike.%' + qq + '%,title.ilike.%' + qq + '%').order('created_at', { ascending: false }).limit(300);
       var q2 = ids.length ? DB.client.from('posts').select(sel).eq('board', code).in('attachments->>legacy_id', ids.slice(0, 300)) : Promise.resolve({ data: [] });
       return Promise.all([q1, q2]).then(function (res) {
         if (res[0].error && !(res[1].data || []).length) { tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#c33">' + esc(res[0].error.message) + '</td></tr>'; return; }
@@ -409,7 +413,7 @@
           var lg = (p.attachments && p.attachments.legacy_id) ? ' data-legacy="' + esc(p.attachments.legacy_id) + '"' : '';
           var it = idx.filter(function (x) { return p.attachments && x.l === p.attachments.legacy_id; })[0];
           var snip = it ? snippet(it.x, q, 60) : '';
-          return '<tr' + lg + '><td class="num">' + (total - from - i) + '</td><td class="tit"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + esc(p.title) + '</a>' +
+          return '<tr' + lg + '><td class="num">' + (total - from - i) + '</td><td class="tit"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + hl(p.title) + '</a>' +
             (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') +
             (snip ? '<div class="kw-snips"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + esc(snip).split(esc(q)).join('<mark style="background:#fff2a8;padding:0 2px">' + esc(q) + '</mark>') + '</a></div>' : '') + adminBtns(p, code) +
             '</td><td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td><td class="hit">' + p.views + '</td></tr>';
@@ -419,7 +423,7 @@
         var note = document.querySelector('.static-note'); if (note) note.remove();
       });
     });
-    bindBoardSearch(code, q, 'content');
+    bindBoardSearch(code, q, f || 'content');
   }
 
   function renderPaging(total, page, q) {

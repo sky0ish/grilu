@@ -53,9 +53,15 @@
         var name = (DB.profile && DB.profile.name) || DB.user.email;
         var status = DB.isAdmin() ? ' <b style="color:var(--gri-orange)">관리자</b>' : (DB.isMember() ? '' : ' <span style="color:#c33">(승인 대기)</span>');
         util.innerHTML = '<span style="padding:0 10px;color:#333">' + DB.esc(name) + '님' + status + '</span>' +
-          (DB.isAdmin() ? '<a href="' + root + 'admin/index.html">관리자</a>' : '') +
+          (DB.isAdmin() ? '<a href="' + root + 'admin/members.html?filter=pending" id="memberMgrLink">회원관리</a>' : '') +
           '<a href="' + root + 'member/mypage.html">내 정보</a>' +
           '<a href="#" id="logoutBtn">로그아웃</a>';
+        if (DB.isAdmin()) {
+          client.from('profiles').select('id', { count: 'exact', head: true }).eq('approved', false).neq('role', 'admin').then(function (r) {
+            var a = document.getElementById('memberMgrLink');
+            if (a && r.count) a.innerHTML = '회원관리 <b style="color:#c33">가입대기 ' + r.count + '명</b>';
+          });
+        }
         document.getElementById('logoutBtn').addEventListener('click', function (e) {
           e.preventDefault();
           client.auth.signOut().then(function () { location.href = root + 'index.html'; });
