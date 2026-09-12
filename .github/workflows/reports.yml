@@ -1,0 +1,35 @@
+name: 분석 자료 주간 자동 갱신 (TOP 30/50/100)
+
+on:
+  schedule:
+    - cron: "30 21 * * 0"     # 매주 월요일 06:30 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests kiwipiepy
+      - name: 행정사무감사 회의록 재수집 (경기연구원 피감 회의)
+        run: python tools/import_audit.py
+      - name: 키워드 통계 재계산
+        run: python tools/keywords.py
+      - name: 직군별 TOP 30 · 문제점-개선안 Top 50 · 행감 TOP 100 재생성 (날짜 기준 갱신)
+        run: |
+          python tools/make_reports.py
+          python tools/make_audit_report.py
+      - name: 페이지 재생성·커밋
+        run: |
+          python build.py
+          git config user.name "grilu-bot"
+          git config user.email "union@grilu.kr"
+          git add -A
+          git commit -m "분석 자료 주간 갱신 $(date -u +'%Y-%m-%d')" || exit 0
+          git push

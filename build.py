@@ -29,10 +29,10 @@ MENUS = [
         ("delegate", "대의원 회의자료"), ("documents", "기타참고자료"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
-        ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"), ("wish", "노조에 바란다"),
+        ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"), ("wish", "노조에 바란다"), ("vote", "조합원 투표"),
     ]),
     ("gri", "GRI", "경기연구원 관련 공개 자료", [
-        ("audit", "행정사무감사"), ("committee", "심의위원회"), ("director", "노동이사 활동보고"), ("budget", "예산결산서"), ("guide", "가이드라인"), ("regulations", "제규정"), ("regulation", "규정 및 지침"), ("calendar", "일정 달력"),
+        ("audit", "행정사무감사"), ("assembly", "경기도의회 회의록"), ("committee", "심의위원회"), ("director", "노동이사 활동보고"), ("budget", "예산결산서"), ("guide", "가이드라인"), ("regulations", "제규정"), ("regulation", "규정 및 지침"), ("calendar", "일정 달력"),
     ]),
 ]
 
@@ -177,7 +177,7 @@ def rows_html(rows, root="../", code=""):
         out.append(f'<tr{legacy}><td class="num">{num}</td><td class="tit"><a href="{link}">{title}</a>{badge}</td><td class="writer">{writer}</td><td class="date">{date}</td><td class="hit">{hit}</td></tr>')
     return "".join(out)
 
-def board_kw_block(kwmap):
+def board_kw_block(kwmap, embed=True):
     """kwmap: {legacy_id: keywords dict} → 게시판 전체 키워드 버튼 + 글별 키워드 JSON"""
     import json as _json
     from collections import Counter
@@ -193,11 +193,11 @@ def board_kw_block(kwmap):
     chips = "".join(f'<a href="#" class="kw{" pos" if sent[w] > 0 else " neg" if sent[w] < 0 else ""}" data-kw="{w}">{w} <b>{posts[w]}</b><span class="note">/{n}</span></a>' for w, n in top)
     return (f'<div class="kw-stats board-kw"><div class="kw-title">&#128202; 이 게시판의 주요 키워드 <span class="note">(글 수/등장 횟수 · 누르면 그 키워드가 들어간 글만 표시, 다시 누르면 해제 · '
             f'<span class="kw-legend pos">긍정어</span> <span class="kw-legend neg">부정어</span>)</span></div>{chips}'
-            f'<script type="application/json" class="board-kw-data">{_json.dumps(simple, ensure_ascii=False)}</script></div>')
+            f'<script type="application/json" class="board-kw-data">{_json.dumps(simple if embed else {}, ensure_ascii=False)}</script></div>')
 
 def board(root, name, rows=None, intro="", extra_btn="", code="", kwmap=None):
     rows = rows or [(len(SAMPLE) - i, f"[{name}] 예시 게시글 {len(SAMPLE)-i}", "노동조합", d, h) for i, (d, h) in enumerate(SAMPLE)]
-    intro = board_kw_block(kwmap) + intro
+    intro = board_kw_block(kwmap, embed=(code != "assembly")) + intro
     return f"""
 {intro}
 <!--SEARCH--><form class="board-search" onsubmit="return false"><select name="f"><option value="title">제목</option><option value="content">내용</option><option value="author">작성자</option></select><input type="search" name="q" placeholder="검색어를 입력하세요"><button type="submit" class="in-board" title="이 게시판 안에서만 검색">게시판내 검색</button><button type="button" class="all-site line" title="홈페이지 전체 검색">전체 검색</button></form><!--/SEARCH-->
@@ -336,18 +336,30 @@ def p_council(root):
     btn = f'<a href="{GW_REG_URL}" target="_blank" rel="noopener" class="btn line">그룹웨어 원문 보기</a>'
     return board(root, "노사협의회", gw_rows("council", root), intro, btn, code="council", kwmap=gw_kwmap("council"))
 
-def p_othernews(root):
-    """빅카인즈 자동 수집 뉴스 (data/othernews.json, tools/fetch_news.py 가 매일 갱신)"""
+def _news_items(code):
+    """빅카인즈 자동 수집 뉴스 (data/othernews.json) 중 게시판별 항목: '경기연구원 노조' 키워드 기사 → 성명서·보도자료, 나머지 → 기타 노조 소식"""
     import json as _json
     try:
         news = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "othernews.json"), encoding="utf-8"))
     except Exception:
         news = []
-    rows = [(len(news) - i, f'{n["title"]} <span class="note">[{n["provider"]}]</span>', "뉴스", n["date"], "-", f'{root}board/view.html?news={n["id"]}') for i, n in enumerate(news)]
-    intro = ('<p>다른 노동조합·연대단체의 소식과 공공기관 노동계 동향입니다. 뉴스는 빅카인즈(한국언론진흥재단)에서 '
-             '<b>"경기도 산하기관 노조"</b>, <b>"경기도 공공기관 노조"</b>, <b>"경기연구원 노조"</b> 키워드로 매일 자동 수집되며, 제목을 누르면 요약과 원문 링크가 표시됩니다.</p>')
-    return board(root, "기타 노조 소식", rows, intro, code="othernews")
+    return [n for n in news if (("경기연구원 노조" in n.get("keywords", [])) == (code == "statement"))]
 
+def _news_rows(news, root):
+    return [(len(news) - i, f'{n["title"]} <span class="note">[{n["provider"]}]</span>', "뉴스", n["date"], "-", f'{root}board/view.html?news={n["id"]}') for i, n in enumerate(news)]
+
+def p_othernews(root):
+    """빅카인즈 자동 수집 뉴스 (tools/fetch_news.py 가 매일 갱신)"""
+    intro = ('<p>다른 노동조합·연대단체의 소식과 공공기관 노동계 동향입니다. 뉴스는 빅카인즈(한국언론진흥재단)에서 '
+             '<b>"경기도 산하기관 노조"</b>, <b>"경기도 공공기관 노조"</b> 키워드로 매일 자동 수집되며, 제목을 누르면 요약과 원문 링크가 표시됩니다. '
+             '(<b>"경기연구원 노조"</b> 관련 기사는 <a href="{0}news/statement.html">성명서·보도자료</a>에 모아 둡니다.)</p>'.format(root))
+    return board(root, "기타 노조 소식", _news_rows(_news_items("othernews"), root), intro, code="othernews")
+
+def p_statement(root):
+    """성명서·보도자료: 노조 게시글 + '경기연구원 노조' 키워드로 자동 수집된 언론 보도"""
+    intro = ('<p>노동조합의 성명서·보도자료와, 빅카인즈(한국언론진흥재단)에서 <b>"경기연구원 노조"</b> 키워드로 매일 자동 수집되는 언론 보도입니다. '
+             '뉴스 제목을 누르면 요약과 원문 링크가 표시됩니다.</p>')
+    return board(root, "성명서·보도자료", _news_rows(_news_items("statement"), root), intro, code="statement")
 def p_delegate(root):
     intro = '<p>대의원대회·대의원회의 안건과 회의자료를 공유합니다. 승인된 조합원만 열람할 수 있습니다.</p>'
     return board(root, "대의원 회의자료", None, intro, code="delegate")
@@ -355,6 +367,19 @@ def p_delegate(root):
 def p_wish(root):
     intro = '<p>노동조합에 바라는 점, 제안, 건의를 자유롭게 남겨 주세요. 승인된 조합원이면 누구나 글을 쓸 수 있고, 운영진이 확인 후 답변합니다.</p>'
     return board(root, "노조에 바란다", None, intro, code="wish")
+
+def p_vote(root):
+    intro = """
+<p>조합원 의견을 묻는 <b>투표·설문</b>입니다. 각 글에서 <b>구글 설문</b>에 바로 응답할 수 있고, 응답 결과는 구글 시트에서 자동으로 집계되어 <b>문항별 통계(막대그래프·비율)</b>로 표시됩니다. 조합원(승인 회원)만 볼 수 있습니다.</p>
+<details class="box" style="margin-bottom:16px"><summary style="cursor:pointer;font-weight:700">운영진용: 투표 만드는 방법</summary>
+<ol style="margin:10px 0 0 18px;line-height:1.9">
+  <li>구글 폼(forms.google.com)에서 설문을 만들고 <b>보내기 → 링크</b>의 주소를 복사합니다.</li>
+  <li>구글 폼 <b>응답 탭 → 스프레드시트에 연결</b>로 응답 시트를 만듭니다.</li>
+  <li>응답 시트에서 <b>파일 → 공유 → 웹에 게시</b> → 시트 선택, 형식 <b>쉼표로 구분된 값(.csv)</b> → 게시 → 주소를 복사합니다.</li>
+  <li>이 게시판에서 <b>글쓰기</b> → 제목·설명을 쓰고 위 두 주소를 각각 <b>구글 설문 링크</b>, <b>결과 시트(CSV) 링크</b> 칸에 붙여 넣습니다. 마감일을 넣으면 마감 후에는 결과만 표시됩니다.</li>
+</ol></details>
+"""
+    return board(root, "조합원 투표", None, intro, code="vote")
 
 def p_members(root):
     return """
@@ -505,6 +530,16 @@ def gw_pages():
             n += 1
     return n
 
+REPORT_ORDER = ["report-demands", "report-demands-res", "report-demands-adm", "report-demands-common", "report-issues", "report-audit"]
+def reports_json():
+    """기타참고자료 분석 글(report-*) 목록 → data/reports.json (JS가 게시판 맨 위에 표시, 매주 자동 갱신)"""
+    import json as _json
+    posts = {p["id"]: p for p in _gw_posts("documents") if p["id"].startswith("report-")}
+    order = [i for i in REPORT_ORDER if i in posts] + [i for i in posts if i not in REPORT_ORDER]
+    out = [{"id": i, "title": posts[i]["title"], "date": posts[i]["date"], "page": f'archive/documents/{i}.html'} for i in order]
+    _json.dump(out, open(os.path.join("data", "reports.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return len(out)
+
 def search_index():
     """전문 검색 색인 data/search_index.json: 그룹웨어 이관 글(본문+첨부 전문), 행정사무감사 회의록, 제규정"""
     import json as _json
@@ -521,13 +556,25 @@ def search_index():
     for r in data:
         idx.append({"l": "audit-" + r["id"], "b": "행정사무감사", "t": f'{r["title"]} — {r["committee"]}', "u": f'gri/audit/{r["id"]}.html',
                     "d": r["date"], "a": "경기도의회", "x": strip(r.get("body", "")), "f": []})
+    # 경기도의회 회의록은 양이 많아(2,600건) 별도 색인 파일로: 경기연구원 언급 문단 앞뒤 1문단만, 글당 8,000자까지
+    import sys as _sys; _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+    import import_assembly as _ia
+    _ia.CTX = 1
+    meta, bodies = _assembly()
+    asm = []
+    for r in meta:
+        h = (bodies.get(r["id"]) or {}).get("html", "")
+        ex, _n = _ia.excerpt(h)
+        asm.append({"l": "asm-" + r["id"], "b": "경기도의회 회의록", "t": r["title"], "u": f'gri/assembly/{r["id"]}.html',
+                    "d": r["date"], "a": "경기도의회", "x": strip(ex or h)[:8000], "f": []})
+    _json.dump(asm, open(os.path.join("data", "search_index_asm.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     for part in _gri_rules():
         for it in part["items"]:
             idx.append({"l": "rule-" + it["id"], "b": "제규정 · " + part["part"], "t": it["title"], "u": f'gri/regulations/part{part["no"]}.html#r{it["id"]}',
                         "d": "", "a": "경기연구원", "x": strip(it.get("html", "")), "f": []})
     os.makedirs("data", exist_ok=True)
     _json.dump(idx, open(os.path.join("data", "search_index.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-    return len(idx)
+    return len(idx) + len(asm)
 
 def p_guide(root):
     intro = '<p>경기연구원 그룹웨어의 모든 게시판에서 제목이 <b>가이드라인</b>·<b>지침</b>으로 끝나는 글을 모았습니다. 출처 게시판은 제목 옆에 표시되며, 본문·첨부 문서 전문을 함께 볼 수 있습니다.</p>'
@@ -589,6 +636,68 @@ def audit_pages():
 </article>"""
         write(f"gri/audit/{r['id']}.html", simple_page(f'{r["title"]} — 행정사무감사', body, wide=True, root="../../", visual="행정사무감사"))
     return len(data)
+
+def _assembly():
+    import json as _json
+    base = os.path.dirname(os.path.abspath(__file__))
+    try:
+        meta = _json.load(open(os.path.join(base, "data", "assembly.json"), encoding="utf-8"))
+    except Exception:
+        return [], {}
+    bodies = {}
+    for r in meta:
+        try:
+            bodies[r["id"]] = _json.load(open(os.path.join(base, "data", "assembly", r["id"] + ".json"), encoding="utf-8"))
+        except Exception:
+            pass
+    return meta, bodies
+
+def p_assembly(root):
+    """경기도의회 회의록: 경기연구원이 본문에 언급된 모든 회의록 (data/assembly.json, 목록은 JS가 페이징)"""
+    meta, bodies = _assembly()
+    rows = [(len(meta) - i, r["title"], "경기도의회", r["date"], "-", f'assembly/{r["id"]}.html', "asm-" + r["id"]) for i, r in enumerate(meta[:20])]
+    kwmap = {"asm-" + r["id"]: (bodies.get(r["id"]) or {}).get("keywords") or {} for r in meta}
+    full = sum(1 for r in meta if r.get("full"))
+    kinds = {}
+    for r in meta: kinds[r["kind"]] = kinds.get(r["kind"], 0) + 1
+    kind_txt = ", ".join(f"{k} {v}건" for k, v in sorted(kinds.items(), key=lambda x: -x[1]))
+    intro = f"""
+<p>경기도의회 회의록시스템(제3대 1991년 ~ 제12대)에서 <b>경기연구원</b>(구 경기개발연구원)이 본문에 한 번이라도 언급된 회의록 <b>{len(meta)}건</b>입니다
+({kind_txt}). 회의록 1건이 평균 280KB로 방대하여 경기연구원이 언급된 발언 부분(앞뒤 2문단)을 발췌해 실었고,
+경기연구원이 30회 이상 언급되거나 경기연구원장 인사청문회처럼 경기연구원이 주제인 회의 <b>{full}건</b>은 전문을 실었습니다.
+인사청문회는 <b>인사청문회 _ 회의명 _ 날짜</b>, 그 밖의 회의는 <b>경기도의회 회의록 _ 날짜 _ 회의명</b> 제목으로 정리했으며,
+경기연구원이 피감기관인 행정사무감사 회의록은 <a href="{root}gri/audit.html">행정사무감사</a> 게시판에 있습니다. 매일 새벽 자동으로 새 회의록을 확인합니다.</p>
+"""
+    btn = '<a href="https://kms.ggc.go.kr/svc/cms/mnts/MntsKeyword.do" target="_blank" rel="noopener" class="btn line">경기도의회 회의록 검색</a>'
+    return board(root, "경기도의회 회의록", rows, intro, btn, code="assembly", kwmap=kwmap)
+
+def assembly_pages():
+    import json as _json
+    meta, bodies = _assembly()
+    for i, r in enumerate(meta):
+        b = bodies.get(r["id"]) or {}
+        prev_ = meta[i + 1] if i + 1 < len(meta) else None
+        next_ = meta[i - 1] if i > 0 else None
+        nav = ""
+        if next_: nav += f'<tr><th style="text-align:left;width:90px">다음글</th><td style="text-align:left"><a href="{next_["id"]}.html">{next_["title"]}</a></td></tr>'
+        if prev_: nav += f'<tr><th style="text-align:left">이전글</th><td style="text-align:left"><a href="{prev_["id"]}.html">{prev_["title"]}</a></td></tr>'
+        bhtml = b.get("html") or "<p class='note'>본문은 원문 링크에서 확인하세요.</p>"
+        bhtml = re.sub(r"(경기개발연구원|경기연구원)", r'<mark style="background:#fff2a8;padding:0 2px"></mark>', bhtml)
+        how = "전문" if r.get("full") else f"경기연구원 언급 부분 발췌 ({b.get('spans', 0)}곳, 앞뒤 2문단 포함)"
+        body = f"""
+<article class="post">
+  <div class="post-head" style="border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px">
+    <span class="badge" style="font-size:12px;color:#fff;background:var(--primary);padding:2px 8px;border-radius:4px">제{r["gen"]}대 경기도의회 · {r["kind"]}</span>
+    <h4 style="border:0;padding:0;margin:8px 0 6px;color:#222;font-size:24px">{r["title"]}</h4>
+    <div class="note">{r["subject"]} &nbsp;|&nbsp; 경기연구원 언급 {r["n"]}회 &nbsp;|&nbsp; {how} &nbsp;|&nbsp; 출처 경기도의회 회의록시스템</div>
+  </div>
+  <script type="application/json" class="kw-data">{_json.dumps(b.get("keywords") or {}, ensure_ascii=False)}</script>
+  <div class="post-body minutes" style="line-height:1.85;font-size:15px">{bhtml}</div>
+  <table class="tbl" style="margin-top:24px">{nav}</table>
+  <div class="board-bottom" style="justify-content:space-between"><a href="../assembly.html" class="btn line">목록</a><a href="{r["url"]}" target="_blank" rel="noopener" class="btn">경기도의회 원문 전체 보기</a></div>
+</article>"""
+        write(f"gri/assembly/{r['id']}.html", simple_page(f'{r["title"]} — 경기도의회 회의록', body, wide=True, root="../../", visual="경기도의회 회의록"))
+    return len(meta)
 
 def p_photo(root):
     caps = ["2026년 정기 대의원대회", "신규 조합원 환영 간담회", "노사협의회 상견례", "조합원 한마음 체육행사",
@@ -705,7 +814,7 @@ PAGES = {
     ("archive", "photo"): p_photo, ("archive", "video"): p_video, ("archive", "agreement"): p_agreement, ("archive", "law"): p_law,
     ("gri", "calendar"): p_calendar, ("community", "counsel"): p_counsel, ("about", "welfare"): p_welfare,
     ("about", "join"): p_join, ("gri", "regulation"): p_regulation, ("archive", "council"): p_council,
-    ("community", "staff"): p_staff, ("gri", "budget"): p_budget, ("gri", "guide"): p_guide, ("archive", "documents"): p_documents, ("news", "news"): p_news, ("gri", "director"): p_director, ("gri", "committee"): p_committee, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("news", "othernews"): p_othernews, ("gri", "audit"): p_audit,
+    ("community", "staff"): p_staff, ("gri", "budget"): p_budget, ("gri", "guide"): p_guide, ("archive", "documents"): p_documents, ("news", "news"): p_news, ("gri", "director"): p_director, ("gri", "committee"): p_committee, ("gri", "regulations"): p_regulations, ("about", "members"): p_members, ("archive", "delegate"): p_delegate, ("community", "wish"): p_wish, ("community", "vote"): p_vote, ("news", "othernews"): p_othernews, ("news", "statement"): p_statement, ("gri", "audit"): p_audit, ("gri", "assembly"): p_assembly,
 }
 
 # ------------------------------------------------------------------ 메인 페이지
@@ -898,6 +1007,9 @@ WRITE = """
 <table class="tbl form-tbl">
   <tr><th>제목</th><td><input type="text" name="title" required></td></tr>
   <tr class="notice-row" style="display:none"><th>공지 여부</th><td><label><input type="checkbox" name="is_notice" style="width:auto"> 상단 공지로 고정</label></td></tr>
+  <tr class="vote-row" style="display:none"><th>구글 설문 링크</th><td><input type="url" name="vote_form" placeholder="https://docs.google.com/forms/d/e/.../viewform"><p class="note">구글 폼 → 보내기 → 링크 주소</p></td></tr>
+  <tr class="vote-row" style="display:none"><th>결과 시트(CSV) 링크</th><td><input type="url" name="vote_csv" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"><p class="note">응답 시트 → 파일 → 공유 → 웹에 게시 → CSV 주소</p></td></tr>
+  <tr class="vote-row" style="display:none"><th>마감일</th><td><input type="date" name="vote_end" style="width:auto"><p class="note">비워 두면 계속 응답을 받습니다.</p></td></tr>
   <tr><th>내용</th><td><textarea name="content" style="height:320px" placeholder="내용을 입력하세요. (동영상 게시판은 유튜브 주소를 넣으면 썸네일이 표시됩니다)"></textarea></td></tr>
   <tr><th>첨부파일</th><td><input type="file" name="files" multiple><div class="existing" style="margin-top:6px"></div><p class="note">여러 개 선택 가능. 사진자료 게시판은 이미지 파일이 썸네일로 사용됩니다.</p></td></tr>
 </table>
@@ -986,9 +1098,11 @@ def main():
     write("board/write.html", simple_page("글쓰기", WRITE, wide=True))
     write("board/search.html", simple_page("자료검색", SEARCH, wide=True))
     n += audit_pages()
+    n += assembly_pages()
     n += regulations_pages()
     n += gw_pages()
     print('검색 색인', search_index(), '건')
+    reports_json()
     write("admin/index.html", simple_page("관리자", ADMIN, wide=True))
     write("admin/members.html", simple_page("회원관리", ADMIN_MEMBERS, wide=True))
     write("admin/events.html", simple_page("일정관리", ADMIN_EVENTS, wide=True))

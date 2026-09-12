@@ -16,14 +16,14 @@
   function boardName(code) {
     var m = { notice: '공지사항', news: '노조소식', statement: '성명서·보도자료', othernews: '기타 노조 소식', regulation: '규정 및 지침', council: '노사협의회',
       documents: '기타참고자료', agreement: '단체협약', law: '노동관계법령', rules: '규약·규정',
-      board: '조합원 자유게시판', staff: '운영진 게시판', delegate: '대의원 회의자료', director: '노동이사 활동보고', committee: '심의위원회', budget: '예산결산서', guide: '가이드라인', wish: '노조에 바란다', audit: '행정사무감사', photo: '사진자료', video: '동영상' };
+      board: '조합원 자유게시판', staff: '운영진 게시판', delegate: '대의원 회의자료', director: '노동이사 활동보고', committee: '심의위원회', budget: '예산결산서', guide: '가이드라인', wish: '노조에 바란다', vote: '조합원 투표', audit: '행정사무감사', assembly: '경기도의회 회의록', photo: '사진자료', video: '동영상' };
     return m[code] || code;
   }
   function boardSection(code) {
     if (['notice', 'news', 'statement', 'newsletter', 'othernews'].indexOf(code) >= 0) return 'news';
     if (['documents', 'agreement', 'law', 'photo', 'video', 'council', 'delegate', 'rules'].indexOf(code) >= 0) return 'archive';
     if (code === 'welfare' || code === 'join') return 'about';
-    if (['audit', 'regulation', 'director', 'committee', 'budget', 'guide'].indexOf(code) >= 0) return 'gri';
+    if (['audit', 'assembly', 'regulation', 'director', 'committee', 'budget', 'guide'].indexOf(code) >= 0) return 'gri';
     return 'community';
   }
   function listUrl(code) { return DB.root + boardSection(code) + '/' + code + '.html'; }
@@ -53,15 +53,19 @@
       .then(function (j) { newsCache = j || []; return newsCache; }).catch(function () { return []; });
   }
   function newsUrl(id) { return DB.root + 'board/view.html?news=' + id; }
+  // '경기연구원 노조' 키워드로 수집된 기사는 성명서·보도자료, 나머지는 기타 노조 소식
+  function newsBoard(n) { return ((n.keywords || []).indexOf('경기연구원 노조') >= 0) ? 'statement' : 'othernews'; }
   function renderNewsView() {
     var box = document.getElementById('postView');
     var id = DB.qs('news');
     if (!box || !id) return false;
-    var t = document.querySelector('.page-title'); if (t) t.textContent = '기타 노조 소식';
-    loadNews().then(function (list) {
-      var n = list.filter(function (x) { return x.id === id; })[0];
+    loadNews().then(function (all) {
+      var n = all.filter(function (x) { return x.id === id; })[0];
       if (!n) { box.innerHTML = '<p style="color:#c33">뉴스를 찾을 수 없습니다.</p>'; return; }
-      document.title = n.title + ' | 기타 노조 소식 | ' + (cfg.SITE_NAME || '');
+      var bcode = newsBoard(n), bname = boardName(bcode);
+      var t = document.querySelector('.page-title'); if (t) t.textContent = bname;
+      document.title = n.title + ' | ' + bname + ' | ' + (cfg.SITE_NAME || '');
+      var list = all.filter(function (x) { return newsBoard(x) === bcode; });
       var i = list.indexOf(n), prev = list[i + 1], next = list[i - 1];
       box.innerHTML = '<div class="post-head" style="border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px">' +
         '<span class="badge" style="font-size:12px;color:#fff;background:var(--primary);padding:2px 8px;border-radius:4px">' + esc(n.provider) + '</span>' +
@@ -73,7 +77,7 @@
         '<table class="tbl" style="margin-top:24px">' +
         (next ? '<tr><th style="text-align:left;width:90px">다음글</th><td style="text-align:left"><a href="' + newsUrl(next.id) + '">' + esc(next.title) + '</a></td></tr>' : '') +
         (prev ? '<tr><th style="text-align:left">이전글</th><td style="text-align:left"><a href="' + newsUrl(prev.id) + '">' + esc(prev.title) + '</a></td></tr>' : '') + '</table>' +
-        '<div class="board-bottom" style="justify-content:space-between"><a href="' + listUrl('othernews') + '" class="btn line">목록</a></div>';
+        '<div class="board-bottom" style="justify-content:space-between"><a href="' + listUrl(bcode) + '" class="btn line">목록</a></div>';
     });
     return true;
   }
@@ -83,7 +87,7 @@
     var page = parseInt(DB.qs('page') || '1', 10), q = (DB.qs('q') || '').trim(), f = DB.qs('f') || 'title';
     var dbq = DB.client.from('posts').select('id,title,author_name,created_at,views,is_notice,attachments').eq('board', code).order('created_at', { ascending: false }).limit(300);
     Promise.all([loadNews(), dbq]).then(function (res) {
-      var items = (res[0] || []).map(function (n) { return { link: newsUrl(n.id), html: esc(n.title) + ' <span class="note">[' + esc(n.provider) + ']</span>', raw: n.title + ' ' + n.summary, writer: '뉴스', date: n.date, hit: '-', notice: false }; });
+      var items = (res[0] || []).filter(function (n) { return newsBoard(n) === code; }).map(function (n) { return { link: newsUrl(n.id), html: esc(n.title) + ' <span class="note">[' + esc(n.provider) + ']</span>', raw: n.title + ' ' + n.summary, writer: '뉴스', date: n.date, hit: '-', notice: false }; });
       ((res[1] && res[1].data) || []).forEach(function (p) {
         items.push({ link: viewUrl(p.id), html: esc(p.title) + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : ''), raw: p.title, writer: p.author_name || '', date: fmt(p.created_at), hit: p.views, notice: p.is_notice });
       });
@@ -106,7 +110,7 @@
 
   // 게시판 검색폼: [게시판내 검색] / [전체 검색]
   function bindBoardSearch(code, q, f) {
-    var form = document.querySelector('.board-top form');
+    var form = document.querySelector('form.board-search') || document.querySelector('.board-top form');
     if (!form) return;
     var inp = form.querySelector('input'); if (inp) inp.value = q || '';
     var sel = form.querySelector('select'); if (sel && f) sel.value = f;
@@ -118,12 +122,125 @@
     if (all) all.onclick = function () { var v = inp.value.trim(); if (!v) { inp.focus(); return; } location.href = DB.root + 'board/search.html?q=' + encodeURIComponent(v); };
   }
 
+  // ---------- 경기도의회 회의록 (정적 data/assembly.json, 글은 gri/assembly/<id>.html) ----------
+  var asmCache = null;
+  function loadAssembly() {
+    if (asmCache) return Promise.resolve(asmCache);
+    return fetch(DB.root + 'data/assembly.json?v=' + Math.floor(Date.now() / 3600000)).then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (j) { asmCache = j || []; return asmCache; }).catch(function () { return []; });
+  }
+  function renderAssemblyList(tbl, code) {
+    var tbody = tbl.querySelector('tbody');
+    var page = parseInt(DB.qs('page') || '1', 10), q = (DB.qs('q') || '').trim(), f = DB.qs('f') || 'title', kw = (DB.qs('kw') || '').trim();
+    var need = ((q && f === 'content') || kw) ? loadIndex() : Promise.resolve(null);
+    Promise.all([loadAssembly(), need]).then(function (res) {
+      var items = res[0] || [], idx = res[1];
+      if (q) {
+        if (f === 'author') items = items.filter(function () { return '경기도의회'.indexOf(q) >= 0; });
+        else if (f === 'content') { var ok = {}; (idx || []).forEach(function (x) { if (x.l.indexOf('asm-') === 0 && (x.x.indexOf(q) >= 0 || x.t.indexOf(q) >= 0)) ok[x.l.slice(4)] = 1; }); items = items.filter(function (x) { return ok[x.id]; }); }
+        else items = items.filter(function (x) { return (x.title + ' ' + x.subject).indexOf(q) >= 0; });
+      }
+      if (kw) items = items.filter(function (x) { return (x.k || []).indexOf(kw) >= 0; });
+      var total = items.length, from = (page - 1) * PAGE, slice = items.slice(from, from + PAGE);
+      var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = total + (kw ? ' (키워드 "' + kw + '")' : '');
+      tbody.innerHTML = slice.length ? slice.map(function (x, i) {
+        var href = DB.root + 'gri/assembly/' + x.id + '.html' + (kw ? '?kw=' + encodeURIComponent(kw) : (q && f === 'content' ? '?kw=' + encodeURIComponent(q) : ''));
+        return '<tr data-legacy="asm-' + esc(x.id) + '"><td class="num">' + (total - from - i) + '</td>' +
+          '<td class="tit"><a href="' + href + '">' + esc(x.title) + '</a> <span class="note">' + esc(x.kind) + ' · 언급 ' + x.n + '회' + (x.full ? ' · 전문' : '') + '</span></td>' +
+          '<td class="writer">경기도의회</td><td class="date">' + esc(x.date) + '</td><td class="hit">-</td></tr>';
+      }).join('') : '<tr><td colspan="5" style="padding:40px;color:#888">해당하는 회의록이 없습니다.</td></tr>';
+      renderPaging(total, page, q);
+      var note = document.querySelector('.static-note'); if (note) note.remove();
+      var wb = document.querySelector('.board-bottom .btn:not(.line)'); if (wb) wb.style.display = 'none';
+      document.dispatchEvent(new CustomEvent('grilu:list', { detail: { code: code, kw: kw } }));
+    });
+    bindBoardSearch(code, q, f);
+  }
+  // ---------- 기타참고자료 분석 글 (data/reports.json, 매주 자동 갱신되는 정적 글) ----------
+  function loadReports() {
+    return fetch(DB.root + 'data/reports.json?v=' + Math.floor(Date.now() / 3600000)).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; });
+  }
+
+  // ---------- 조합원 투표: 구글 설문 삽입 + 결과 시트(CSV) 통계 ----------
+  function parseVote(content) {
+    var out = { form: '', csv: '', end: '', body: '' }, lines = (content || '').split('\n'), rest = [];
+    lines.forEach(function (l) {
+      var m = l.match(/^\[(설문|결과|마감)\]\s*(.*)$/);
+      if (!m) { rest.push(l); return; }
+      if (m[1] === '설문') out.form = m[2].trim(); else if (m[1] === '결과') out.csv = m[2].trim(); else out.end = m[2].trim();
+    });
+    out.body = rest.join('\n').replace(/^\n+/, '');
+    return out;
+  }
+  function parseCSV(text) {
+    var rows = [], row = [], cur = '', q = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+      else if (c === '"') q = true;
+      else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (x) { return x !== ''; }); });
+  }
+  function renderVote(box, p) {
+    var v = parseVote(p.content || '');
+    var body = box.querySelector('.post-body');
+    var closed = v.end && new Date(v.end + 'T23:59:59') < new Date();
+    var formUrl = v.form ? v.form.replace(/\?.*$/, '') + '?embedded=true' : '';
+    var html = '<div class="vote-body" style="line-height:1.9;margin-bottom:16px">' + esc(v.body).replace(/\n/g, '<br>') + '</div>' +
+      '<div class="note" style="margin-bottom:10px">' + (v.end ? (closed ? '<b style="color:#c33">마감됨</b> (' + esc(v.end) + ')' : '마감일 <b>' + esc(v.end) + '</b>') : '마감일 없음 · 계속 응답 가능') + '</div>';
+    if (v.form && !closed) {
+      html += '<div class="box" style="padding:0;overflow:hidden;margin-bottom:20px"><div style="padding:10px 14px;background:#f4f6fa;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center"><b>&#128499; 투표에 참여해 주세요</b><a href="' + esc(v.form) + '" target="_blank" rel="noopener" class="btn sm">새 창에서 열기</a></div>' +
+        '<iframe src="' + esc(formUrl) + '" style="width:100%;height:900px;border:0" loading="lazy" title="조합원 투표 설문"></iframe></div>';
+    }
+    html += '<div class="vote-result"><h4 style="margin:0 0 10px">&#128202; 투표 결과 <button type="button" class="btn sm line vote-refresh" style="margin-left:8px">새로고침</button></h4><div class="vote-stats note">결과를 불러오는 중…</div></div>';
+    body.innerHTML = html;
+    var stats = body.querySelector('.vote-stats');
+    function load() {
+      if (!v.csv) { stats.innerHTML = '결과 시트(CSV) 링크가 등록되지 않아 통계를 표시할 수 없습니다.'; return; }
+      stats.textContent = '결과를 불러오는 중…';
+      fetch(v.csv + (v.csv.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now()).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(function (t) {
+        var rows = parseCSV(t); if (rows.length < 1) { stats.textContent = '아직 응답이 없습니다.'; return; }
+        var head = rows[0], data = rows.slice(1), n = data.length;
+        var out = '<p style="margin-bottom:14px">응답 <b style="font-size:20px;color:var(--primary)">' + n + '</b>건' + (data.length && data[0][0] ? ' · 최근 응답 ' + esc(data[n - 1][0]) : '') + '</p>';
+        head.forEach(function (h, ci) {
+          if (!h || /^(타임스탬프|timestamp)$/i.test(h.trim())) return;
+          var vals = data.map(function (r) { return (r[ci] || '').trim(); }).filter(Boolean);
+          if (!vals.length) { out += '<div class="box" style="margin-bottom:12px"><b>' + esc(h) + '</b><p class="note">응답 없음</p></div>'; return; }
+          var uniq = {}; vals.forEach(function (x) { uniq[x] = 1; });
+          var multi = Object.keys(uniq).length > 8 && vals.filter(function (x) { return x.indexOf(', ') >= 0; }).length > vals.length / 3;
+          var counts = {}, total = 0;
+          vals.forEach(function (x) { (multi ? x.split(', ') : [x]).forEach(function (o) { o = o.trim(); if (!o) return; counts[o] = (counts[o] || 0) + 1; total++; }); });
+          var keys = Object.keys(counts);
+          var avgLen = vals.reduce(function (a, x) { return a + x.length; }, 0) / vals.length;
+          if (keys.length > 12 && avgLen > 12) {
+            out += '<div class="box" style="margin-bottom:12px"><b>' + esc(h) + '</b> <span class="note">(주관식 · ' + vals.length + '건)</span><ul class="bul" style="margin-top:8px;max-height:260px;overflow:auto">' + vals.slice(0, 100).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+            return;
+          }
+          keys.sort(function (a, b) { return counts[b] - counts[a]; });
+          var max = counts[keys[0]] || 1;
+          out += '<div class="box" style="margin-bottom:12px"><b>' + esc(h) + '</b> <span class="note">(' + (multi ? '복수응답 ' + total + '개 / ' : '') + vals.length + '명 응답)</span><table class="vote-bars" style="width:100%;margin-top:8px;border-collapse:collapse">' +
+            keys.map(function (k) { var pct = Math.round(counts[k] / vals.length * 1000) / 10; return '<tr><td style="width:34%;padding:4px 8px 4px 0;text-align:left;font-size:14px">' + esc(k) + '</td><td style="padding:4px 0"><div style="background:#e9eef6;border-radius:4px;height:22px;position:relative"><div style="width:' + Math.round(counts[k] / max * 100) + '%;height:100%;background:var(--primary);border-radius:4px;min-width:2px"></div></div></td><td style="width:110px;padding:4px 0 4px 10px;text-align:right;font-size:14px"><b>' + counts[k] + '</b>명 <span class="note">(' + pct + '%)</span></td></tr>'; }).join('') + '</table></div>';
+        });
+        stats.className = 'vote-stats'; stats.innerHTML = out;
+      }).catch(function (e) { stats.innerHTML = '<span style="color:#c33">결과를 불러오지 못했습니다. 응답 시트가 "웹에 게시(CSV)" 되어 있는지 확인하세요.</span> <span class="note">(' + esc(String(e.message || e)) + ')</span>'; });
+    }
+    body.querySelector('.vote-refresh').onclick = load;
+    load();
+  }
+
   // ---------- 게시판 키워드 버튼: 누르면 해당 키워드가 들어간 글만 표시 ----------
   function bindBoardKw() {
     var box = document.querySelector('.board-kw'); if (!box) return;
     var dataEl = box.querySelector('.board-kw-data'); var map = {};
     try { map = JSON.parse(dataEl.textContent); } catch (e) {}
-    var cur = '';
+    var tbl0 = document.querySelector('table.tbl[data-board]'); var code0 = tbl0 && tbl0.getAttribute('data-board');
+    var pre = code0 === 'assembly';   // 정적 목록(경기도의회 회의록)은 ?kw= 로 이미 걸러져 있음
+    var cur = pre ? (DB.qs('kw') || '') : '';
+    if (pre) document.addEventListener('grilu:list', function () { if (cur) loadIndex().then(apply); else apply(); });
     function escRe(str) { var BS = String.fromCharCode(92); return str.split('').map(function (c) { return /[A-Za-z0-9가-힣 ]/.test(c) ? c : BS + c; }).join(''); }
     function kwSentences(text, kw, max) {
       // 키워드가 들어간 문장들 (최대 max개) — 문장 단위로 잘라 형광 표시
@@ -136,10 +253,10 @@
       var shown = 0;
       rows.forEach(function (tr) {
         var lid = tr.getAttribute('data-legacy');
-        var ok = !cur || ((map[lid] || []).indexOf(cur) >= 0);
+        var ok = pre || !cur || ((map[lid] || []).indexOf(cur) >= 0);
         tr.style.display = ok ? '' : 'none'; if (ok) shown++;
         var a = tr.querySelector('.tit a');
-        if (a) { if (!a.getAttribute('data-href')) a.setAttribute('data-href', a.getAttribute('href')); var h = a.getAttribute('data-href'); a.setAttribute('href', cur ? h + (h.indexOf('?') >= 0 ? '&' : '?') + 'kw=' + encodeURIComponent(cur) : h); }
+        if (a) { if (!a.getAttribute('data-href')) a.setAttribute('data-href', a.getAttribute('href')); var h = a.getAttribute('data-href'); a.setAttribute('href', (cur && h.indexOf('kw=') < 0) ? h + (h.indexOf('?') >= 0 ? '&' : '?') + 'kw=' + encodeURIComponent(cur) : h); }
         var old = tr.querySelector('.kw-snips'); if (old) old.remove();
         if (ok && cur && idxCache) {
           var it = idxCache.filter(function (x) { return x.l === lid; })[0];
@@ -154,13 +271,14 @@
           }
         }
       });
-      var cnt = document.querySelector('.board-top .total'); if (cnt && cur) cnt.textContent = shown + ' (키워드 "' + cur + '")';
-      var pg = document.querySelector('.paging'); if (pg) pg.style.display = cur ? 'none' : '';
+      var cnt = document.querySelector('.board-top .total'); if (cnt && cur && !pre) cnt.textContent = shown + ' (키워드 "' + cur + '")';
+      var pg = document.querySelector('.paging'); if (pg && !pre) pg.style.display = cur ? 'none' : '';
       box.querySelectorAll('a.kw').forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-kw') === cur); });
     }
     box.addEventListener('click', function (e) {
       var a = e.target.closest('a.kw'); if (!a) return; e.preventDefault();
       var kw = a.getAttribute('data-kw');
+      if (pre) { location.href = location.pathname + (cur === kw ? '' : '?kw=' + encodeURIComponent(kw)); return; }
       if (cur === kw) { cur = ''; apply(); if (DB.ready) location.reload(); return; }
       cur = kw;
       // DB 목록은 한 페이지만 보이므로, 키워드 필터 때는 전체 글을 불러와 표시 (+ 전문 색인으로 문장 표시)
@@ -187,7 +305,8 @@
     var tbl = document.querySelector('.tbl[data-board]');
     if (!tbl) return;
     var code = tbl.getAttribute('data-board');
-    if (code === 'othernews') return renderNewsList(tbl, code);
+    if (code === 'othernews' || code === 'statement') return renderNewsList(tbl, code);
+    if (code === 'assembly') return renderAssemblyList(tbl, code);
     var tbody = tbl.querySelector('tbody');
     var page = parseInt(DB.qs('page') || '1', 10);
     var q = DB.qs('q') || '', f = DB.qs('f') || 'title';
@@ -197,7 +316,9 @@
       .eq('board', code).order('is_notice', { ascending: false }).order('created_at', { ascending: false }).range(from, to);
     if (q) query = query.ilike(f === 'content' ? 'content' : f === 'author' ? 'author_name' : 'title', '%' + q + '%');
 
-    query.then(function (r) {
+    var reportsP = (code === 'documents' && !q && page === 1) ? loadReports() : Promise.resolve([]);
+    Promise.all([query, reportsP]).then(function (res) {
+      var r = res[0], reports = res[1] || [];
       if (r.error) {
         if (r.error.code === 'PGRST301' || /permission|policy|row-level/i.test(r.error.message)) {
           tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#c33">조합원 전용 게시판입니다. 로그인 후 이용해 주세요.</td></tr>';
@@ -207,9 +328,19 @@
         }
         return;
       }
-      var total = r.count || 0;
+      var total = (r.count || 0) + reports.length;
       var cnt = document.querySelector('.board-top .total');
       if (cnt) cnt.textContent = total;
+      var reportRows = reports.map(function (x, i) {
+        return '<tr data-legacy="' + esc(x.id) + '" style="background:#f8f9fd"><td class="num"><span class="badge" style="background:var(--primary);color:#fff;font-size:11px;padding:2px 6px;border-radius:3px">분석</span></td>' +
+          '<td class="tit"><a href="' + DB.root + x.page + '">' + esc(x.title) + '</a>' + (isNew(x.date) ? ' <span class="badge new" style="font-size:11px;color:#fff;background:#e5533c;padding:1px 6px;border-radius:3px">N</span>' : '') + '</td>' +
+          '<td class="writer">관리자</td><td class="date">' + esc(x.date) + '</td><td class="hit">-</td></tr>';
+      }).join('');
+      if (!r.data.length && reports.length) {
+        tbody.innerHTML = reportRows; renderPaging(total, page, q); renderWriteBtn(code);
+        var sn = document.querySelector('.static-note'); if (sn) sn.remove();
+        return;
+      }
       if (!r.data.length && !q && page === 1) {
         DB.client.from('boards').select('members_only').eq('code', code).maybeSingle().then(function (b) {
           if (b.data && b.data.members_only && !DB.isMember()) {
@@ -229,8 +360,8 @@
       if (!r.data.length) {
         tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#888">등록된 게시글이 없습니다.</td></tr>';
       } else {
-        tbody.innerHTML = r.data.map(function (p, i) {
-          var num = p.is_notice ? '<span class="badge" style="background:var(--primary);color:#fff;font-size:11px;padding:2px 6px;border-radius:3px">공지</span>' : (total - from - i);
+        tbody.innerHTML = reportRows + r.data.map(function (p, i) {
+          var num = p.is_notice ? '<span class="badge" style="background:var(--primary);color:#fff;font-size:11px;padding:2px 6px;border-radius:3px">공지</span>' : (total - reports.length - from - i);
           var lg = (p.attachments && p.attachments.legacy_id) ? ' data-legacy="' + esc(p.attachments.legacy_id) + '"' : '';
           return '<tr' + lg + (p.is_notice ? ' style="background:#f8f9fd"' : '') + '><td class="num">' + num + '</td>' +
             '<td class="tit"><a href="' + viewUrl(p.id) + '">' + esc(p.title) + '</a>' +
@@ -249,7 +380,7 @@
     var box = document.querySelector('.paging');
     if (!box) return;
     var pages = Math.max(1, Math.ceil(total / PAGE)), s = Math.max(1, page - 4), e = Math.min(pages, s + 9), html = '';
-    var f0 = DB.qs('f'); var base = location.pathname + '?' + (q ? 'q=' + encodeURIComponent(q) + '&' : '') + (f0 ? 'f=' + f0 + '&' : '') + 'page=';
+    var f0 = DB.qs('f'), k0 = DB.qs('kw'); var base = location.pathname + '?' + (q ? 'q=' + encodeURIComponent(q) + '&' : '') + (f0 ? 'f=' + f0 + '&' : '') + (k0 ? 'kw=' + encodeURIComponent(k0) + '&' : '') + 'page=';
     if (page > 1) html += '<a href="' + base + (page - 1) + '">&laquo;</a>';
     for (var i = s; i <= e; i++) html += '<a href="' + base + i + '"' + (i === page ? ' class="on"' : '') + '>' + i + '</a>';
     if (page < pages) html += '<a href="' + base + (page + 1) + '">&raquo;</a>';
@@ -289,6 +420,7 @@
         '<div class="post-body">' + content + '</div>' + attachHtml(p.attachments) +
         '<div class="board-bottom" style="justify-content:space-between"><a href="' + listUrl(p.board) + '" class="btn line">목록</a>' +
         (canEdit ? '<span><a href="' + writeUrl(p.board, p.id) + '" class="btn">수정</a> <a href="#" class="btn del-btn" style="background:#c33">삭제</a></span>' : '') + '</div>';
+      if (p.board === 'vote') renderVote(box, p);
       loadFullText(p);
       if (!(p.attachments && p.attachments.legacy_id && p.attachments.legacy_id.indexOf('audit-') === 0)) { var pb = box.querySelector('.post-body'); if (pb) renderKeywords(pb, pb); }
       box.querySelectorAll('.del-btn').forEach(function (del) { del.addEventListener('click', function (e) {
@@ -432,11 +564,14 @@
     form.querySelector('[name=board]').value = code;
     var noticeRow = form.querySelector('.notice-row'); if (noticeRow) noticeRow.style.display = DB.isAdmin() ? '' : 'none';
     var existing = [];
+    var isVote = code === 'vote';
+    form.querySelectorAll('.vote-row').forEach(function (tr) { tr.style.display = isVote ? '' : 'none'; });
 
     if (id) {
       DB.client.from('posts').select('*').eq('id', id).maybeSingle().then(function (r) {
         if (!r.data) return alert('게시글을 불러올 수 없습니다.');
         form.title.value = r.data.title; form.content.value = r.data.content || '';
+        if (isVote) { var vm = parseVote(r.data.content || ''); form.vote_form.value = vm.form || ''; form.vote_csv.value = vm.csv || ''; form.vote_end.value = vm.end || ''; form.content.value = vm.body; }
         if (form.is_notice) form.is_notice.checked = r.data.is_notice;
         existing = Array.isArray(r.data.attachments) ? r.data.attachments : [];
         renderExisting();
@@ -451,6 +586,10 @@
 
     form.onsubmit = function () {
       var btn = form.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = '저장 중...';
+      if (isVote) {
+        if (!form.vote_form.value.trim()) { alert('구글 설문 링크를 입력하세요.'); btn.disabled = false; btn.textContent = '저장'; return false; }
+        form.content.value = '[설문] ' + form.vote_form.value.trim() + '\n[결과] ' + form.vote_csv.value.trim() + '\n[마감] ' + (form.vote_end.value || '') + '\n' + form.content.value.replace(/^\[(설문|결과|마감)\][^\n]*\n?/gm, '');
+      }
       var files = form.files ? Array.prototype.slice.call(form.files.files) : [];
       Promise.all(files.map(function (f) { return DB.upload(f, code); })).then(function (uploaded) {
         var row = {
@@ -527,8 +666,9 @@
   var idxCache = null;
   function loadIndex() {
     if (idxCache) return Promise.resolve(idxCache);
-    return fetch(DB.root + 'data/search_index.json?v=' + Math.floor(Date.now() / 3600000)).then(function (r) { return r.ok ? r.json() : []; })
-      .then(function (j) { idxCache = j || []; return idxCache; }).catch(function () { return []; });
+    var v = '?v=' + Math.floor(Date.now() / 3600000);
+    function get(f) { return fetch(DB.root + 'data/' + f + v).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }); }
+    return Promise.all([get('search_index.json'), get('search_index_asm.json')]).then(function (a) { idxCache = (a[0] || []).concat(a[1] || []); return idxCache; });
   }
   function snippet(text, q, width) {
     var i = text.toLowerCase().indexOf(q.toLowerCase()); if (i < 0) return '';
@@ -579,7 +719,7 @@
             '<td class="tit"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + title + '</a>' + (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') + '</td>' +
             '<td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td></tr>';
         }).join('') + newsHits.map(function (n) {
-          return '<tr><td class="num"><a href="' + listUrl('othernews') + '" style="color:var(--primary);font-weight:600">기타 노조 소식</a></td>' +
+          return '<tr><td class="num"><a href="' + listUrl(newsBoard(n)) + '" style="color:var(--primary);font-weight:600">' + esc(boardName(newsBoard(n))) + '</a></td>' +
             '<td class="tit"><a href="' + newsUrl(n.id) + '">' + esc(n.title).replace(re, '<mark style="background:#fff2a8;padding:0 2px">$1</mark>') + ' <span class="note">[' + esc(n.provider) + ']</span></a></td>' +
             '<td class="writer">뉴스</td><td class="date">' + esc(n.date) + '</td></tr>';
         }).join('');
