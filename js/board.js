@@ -311,6 +311,7 @@
     var page = parseInt(DB.qs('page') || '1', 10);
     var q = DB.qs('q') || '', f = DB.qs('f') || 'title';
     var from = (page - 1) * PAGE, to = from + PAGE - 1;
+    if (q && f === 'content') return renderContentSearch(tbl, code, q, page);
 
     var query = DB.client.from('posts').select('id,title,author_name,created_at,views,is_notice,attachments', { count: 'exact' })
       .eq('board', code).order('is_notice', { ascending: false }).order('created_at', { ascending: false }).range(from, to);
@@ -376,6 +377,38 @@
 
     bindBoardSearch(code, q, f);
   }
+  // 게시판내 '내용' 검색: DB 본문(ilike) + 전문 색인(이관 글의 본문·첨부 전문)을 합쳐 검색
+  function renderContentSearch(tbl, code, q, page) {
+    var tbody = tbl.querySelector('tbody'), bname = boardName(code);
+    var sel = 'id,title,author_name,created_at,views,is_notice,attachments';
+    loadIndex().then(function (idx) {
+      var ids = idx.filter(function (x) { return x.b === bname && (x.x.indexOf(q) >= 0 || x.t.indexOf(q) >= 0); }).map(function (x) { return x.l; });
+      var q1 = DB.client.from('posts').select(sel).eq('board', code).ilike('content', '%' + q + '%').order('created_at', { ascending: false }).limit(300);
+      var q2 = ids.length ? DB.client.from('posts').select(sel).eq('board', code).in('attachments->>legacy_id', ids.slice(0, 300)) : Promise.resolve({ data: [] });
+      return Promise.all([q1, q2]).then(function (res) {
+        if (res[0].error && !(res[1].data || []).length) { tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#c33">' + esc(res[0].error.message) + '</td></tr>'; return; }
+        var seen = {}, items = [];
+        (res[0].data || []).concat(res[1].data || []).forEach(function (p) { if (!seen[p.id]) { seen[p.id] = 1; items.push(p); } });
+        items.sort(function (a, b) { return a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0; });
+        var total = items.length, from = (page - 1) * PAGE, slice = items.slice(from, from + PAGE);
+        var cnt = document.querySelector('.board-top .total'); if (cnt) cnt.textContent = total;
+        tbody.innerHTML = slice.length ? slice.map(function (p, i) {
+          var lg = (p.attachments && p.attachments.legacy_id) ? ' data-legacy="' + esc(p.attachments.legacy_id) + '"' : '';
+          var it = idx.filter(function (x) { return p.attachments && x.l === p.attachments.legacy_id; })[0];
+          var snip = it ? snippet(it.x, q, 60) : '';
+          return '<tr' + lg + '><td class="num">' + (total - from - i) + '</td><td class="tit"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + esc(p.title) + '</a>' +
+            (attachCount(p.attachments) ? ' <span title="첨부">&#128206;</span>' : '') +
+            (snip ? '<div class="kw-snips"><a href="' + viewUrl(p.id) + '&kw=' + encodeURIComponent(q) + '">' + esc(snip).split(esc(q)).join('<mark style="background:#fff2a8;padding:0 2px">' + esc(q) + '</mark>') + '</a></div>' : '') +
+            '</td><td class="writer">' + esc(p.author_name || '') + '</td><td class="date">' + fmt(p.created_at) + '</td><td class="hit">' + p.views + '</td></tr>';
+        }).join('') : '<tr><td colspan="5" style="padding:40px;color:#888">"' + esc(q) + '"이(가) 들어간 글이 없습니다.</td></tr>';
+        renderPaging(total, page, q);
+        renderWriteBtn(code);
+        var note = document.querySelector('.static-note'); if (note) note.remove();
+      });
+    });
+    bindBoardSearch(code, q, 'content');
+  }
+
   function renderPaging(total, page, q) {
     var box = document.querySelector('.paging');
     if (!box) return;
