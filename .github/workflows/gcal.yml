@@ -1,0 +1,31 @@
+name: 구글 캘린더 [GRILU] 일정 수집
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"     # 30분마다
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  gcal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: iCal 공개 주소에서 일정 수집 (2026-09 이후)
+        env:
+          GRILU_ICS_URL: ${{ vars.GRILU_ICS_URL }}
+        run: python tools/fetch_gcal.py
+      - name: 변경 시에만 커밋
+        run: |
+          if git diff --quiet -- data/gcal.json; then echo "변경 없음"; exit 0; fi
+          git config user.name "grilu-bot"
+          git config user.email "union@grilu.kr"
+          git add data/gcal.json
+          git commit -m "GRILU 캘린더 일정 갱신 $(date -u +'%Y-%m-%d %H:%M')"
+          git push

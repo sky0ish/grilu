@@ -26,7 +26,7 @@ MENUS = [
     ]),
     ("archive", "자료마당", "노동조합 활동 자료를 모았습니다", [
         ("council", "노사협의회"), ("agreement", "단체협약"), ("rules", "규약·규정"), ("law", "노동관계법령"),
-        ("delegate", "대의원 회의자료"), ("documents", "기타참고자료"),
+        ("delegate", "회의자료"), ("documents", "기타참고자료"),
     ]),
     ("community", "소통마당", "조합원과 함께 소통합니다", [
         ("staff", "운영진 게시판"), ("board", "조합원 자유게시판"), ("counsel", "소통상담"), ("wish", "노조에 바란다"), ("vote", "조합원 투표"),
@@ -132,6 +132,7 @@ def footer(root):
 <script src="{root}js/events.js?v={VER}"></script>
 <script src="{root}js/db.js?v={VER}"></script>
 <script src="{root}js/main.js?v={VER}"></script>
+<script src="{root}js/calendar.js?v={VER}"></script>
 <script src="{root}js/board.js?v={VER}"></script>
 <script src="{root}js/auth.js?v={VER}"></script>
 <script src="{root}js/admin.js?v={VER}"></script>
@@ -361,8 +362,9 @@ def p_statement(root):
              '뉴스 제목을 누르면 요약과 원문 링크가 표시됩니다.</p>')
     return board(root, "성명서·보도자료", _news_rows(_news_items("statement"), root), intro, code="statement")
 def p_delegate(root):
-    intro = '<p>대의원대회·대의원회의 안건과 회의자료를 공유합니다. 승인된 조합원만 열람할 수 있습니다.</p>'
-    return board(root, "대의원 회의자료", None, intro, code="delegate")
+    intro = ('<p>대의원대회·집행부 회의·노사협의 등 노동조합 회의의 안건, 회의록, 참고자료를 공유합니다. 승인된 조합원만 열람할 수 있습니다. '
+             f'<a href="{root}gri/calendar.html">일정 달력</a>에서 일정에 자료를 첨부하면 이 게시판에 자동으로 글이 올라갑니다.</p>')
+    return board(root, "회의자료", None, intro, code="delegate")
 
 def p_wish(root):
     intro = '<p>노동조합에 바라는 점, 제안, 건의를 자유롭게 남겨 주세요. 승인된 조합원이면 누구나 글을 쓸 수 있고, 운영진이 확인 후 답변합니다.</p>'
@@ -710,19 +712,13 @@ def p_video(root):
     return f'<div class="gallery sub-gal" data-board="video">{items}</div><div class="board-bottom"><a href="{root}board/write.html?board=video" class="btn">영상 등록</a></div><p class="note" style="margin-top:14px">※ 내용에 유튜브 주소를 넣으면 썸네일이 자동 표시됩니다.</p>'
 
 def p_calendar(root):
-    return """
-<div class="cal-grid">
-  <div class="card calendar">
-    <div class="cal-head">
-      <h4 class="cal-title">2026년 9월</h4>
-      <div class="nav"><button class="prev" aria-label="이전 달">&lsaquo;</button><button class="today-btn">오늘</button><button class="next" aria-label="다음 달">&rsaquo;</button></div>
-    </div>
-    <table><thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead><tbody></tbody></table>
-    <div class="legend"><span><i style="background:#1f398f"></i>노조</span><span><i style="background:#1f7a54"></i>노사협의회</span><span><i style="background:#b86400"></i>행사</span><span><i style="background:#c33"></i>휴일</span></div>
-  </div>
-  <div class="card upcoming"><h4 class="up-title">이달의 일정</h4><ul></ul></div>
+    return f"""
+<p>노동조합 일정입니다. 관리자는 날짜를 눌러 일정을 추가·수정할 수 있고, 회의록·참고자료를 첨부하면 <a href="{root}archive/delegate.html">자료마당 &gt; 회의자료</a> 게시판에 자동으로 글이 올라갑니다.
+파일은 <b>끌어다 놓기</b>, <b>캡처 붙여넣기(Ctrl+V)</b>, <b>파일 선택</b> 모두 가능합니다. 구글 캘린더 [GRILU]의 일정(2026년 9월 이후)은 30분마다 자동으로 가져옵니다.</p>
+<div class="cal-page">
+  <div class="card"><div class="gcal gcal-big" data-upcoming=".gcal-upcoming"></div></div>
+  <div class="card gcal-upcoming" data-limit="12"><h4>다가오는 일정</h4><p class="note">불러오는 중…</p></div>
 </div>
-<p class="note" style="margin-top:16px">※ 일정은 <code>js/events.js</code> 파일에서 추가·수정합니다. (날짜, 제목, 구분, 설명)</p>
 """
 
 def p_counsel(root):
@@ -878,14 +874,20 @@ def index():
 </section>
 
 <div class="wrap">
-  <nav class="quick" aria-label="바로가기"><ul>
-    <li><a href="news/notice.html"><span class="ico">&#128226;</span>공지사항</a></li>
-    <li><a href="gri/regulation.html"><span class="ico">&#128218;</span>규정 및 지침</a></li>
-    <li><a href="archive/council.html"><span class="ico">&#129309;</span>노사협의회</a></li>
-    <li><a href="gri/calendar.html"><span class="ico">&#128197;</span>일정 달력</a></li>
-    <li><a href="community/counsel.html"><span class="ico">&#128172;</span>소통상담</a></li>
-    <li><a href="about/join.html"><span class="ico">&#9997;</span>조합가입</a></li>
-  </ul></nav>
+  <div class="home-dash">
+    <div class="home-side">
+      <nav class="quick quick2" aria-label="바로가기"><ul>
+        <li><a href="news/notice.html"><span class="ico">&#128226;</span>공지사항</a></li>
+        <li><a href="about/join.html"><span class="ico">&#9997;</span>조합가입</a></li>
+        <li><a href="community/counsel.html"><span class="ico">&#128172;</span>소통상담</a></li>
+        <li><a href="gri/regulation.html"><span class="ico">&#128218;</span>규정 및 지침</a></li>
+        <li><a href="archive/council.html"><span class="ico">&#129309;</span>노사협의회</a></li>
+        <li><a href="archive/rules.html"><span class="ico">&#128220;</span>규약·규정</a></li>
+      </ul></nav>
+      <div class="card gcal-upcoming" data-limit="6"><h4>다가오는 일정</h4><p class="note">불러오는 중…</p></div>
+    </div>
+    <div class="card home-cal"><div class="gcal" data-upcoming=".gcal-upcoming" data-more="gri/calendar.html"></div></div>
+  </div>
 </div>
 
 <section class="section">
@@ -917,22 +919,6 @@ def index():
   </div>
 </section>
 
-<section class="section soft">
-  <div class="wrap">
-    <div class="sec-head"><h3><small>Calendar</small>노동조합 일정</h3><a href="gri/calendar.html" class="more">전체 일정</a></div>
-    <div class="cal-grid">
-      <div class="card calendar">
-        <div class="cal-head">
-          <h4 class="cal-title">2026년 9월</h4>
-          <div class="nav"><button class="prev" aria-label="이전 달">&lsaquo;</button><button class="today-btn">오늘</button><button class="next" aria-label="다음 달">&rsaquo;</button></div>
-        </div>
-        <table><thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead><tbody></tbody></table>
-        <div class="legend"><span><i style="background:#1f398f"></i>노조</span><span><i style="background:#1f7a54"></i>노사협의회</span><span><i style="background:#b86400"></i>행사</span><span><i style="background:#c33"></i>휴일</span></div>
-      </div>
-      <div class="card upcoming"><h4 class="up-title">이달의 일정</h4><ul></ul></div>
-    </div>
-  </div>
-</section>
 
 <section class="section">
   <div class="wrap">

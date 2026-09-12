@@ -435,3 +435,73 @@ mark.kw-hit.cur{background:#f39800;color:#fff}
 
 .post-actions{position:absolute;right:0;top:0;display:flex;gap:6px}
 .btn.sm{padding:6px 12px;font-size:13px}
+
+/* ---------- 첫 화면: 바로가기(2×3) + 다가오는 일정 | 달력 ---------- */
+.home-dash{display:grid;grid-template-columns:300px 1fr;gap:20px;margin-top:-46px;position:relative;z-index:5}
+.home-side{display:flex;flex-direction:column;gap:16px}
+.quick.quick2{margin-top:0}
+.quick.quick2 ul{grid-template-columns:repeat(2,1fr)}
+.quick.quick2 li+li{border-left:0}
+.quick.quick2 li:nth-child(2n){border-left:1px solid var(--line)}
+.quick.quick2 li:nth-child(n+3){border-top:1px solid var(--line)}
+.quick.quick2 a{padding:18px 8px;font-size:14px;gap:6px}
+.quick.quick2 .ico{width:44px;height:44px;font-size:21px}
+.home-cal{padding:18px 20px}
+.gcal-upcoming h4{font-size:16px;margin-bottom:6px}
+.gcal-upcoming ul{list-style:none;margin:0;padding:0}
+.gcal-upcoming li{border-bottom:1px dashed var(--line)}
+.gcal-upcoming li:last-child{border:0}
+.gcal-upcoming .up-item{display:flex;gap:12px;padding:10px 0;color:#333}
+.gcal-upcoming .date-box{flex-shrink:0;width:54px;text-align:center;background:var(--bg-soft);border-radius:6px;padding:5px 0;line-height:1.2}
+.gcal-upcoming .date-box b{display:block;font-size:19px;color:var(--primary)}
+.gcal-upcoming .date-box span{font-size:11px;color:#888}
+.gcal-upcoming .tit{font-weight:600;font-size:14px;line-height:1.35}
+.gcal-upcoming .desc{font-size:12px;color:#777;margin-top:2px}
+.cal-page{display:grid;grid-template-columns:1fr 320px;gap:20px}
+/* ---------- 달력 ---------- */
+.gcal{font-size:14px}
+.gc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.gc-nav{display:flex;align-items:center;gap:6px}
+.gc-nav b{font-size:22px;margin:0 8px;letter-spacing:1px}
+.gc-nav button{border:1px solid var(--line);background:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;color:#555;cursor:pointer}
+.gc-nav button.gc-today{width:auto;border-radius:17px;padding:0 12px;font-size:13px}
+.gc-nav button:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+.gc-right{display:flex;align-items:center;gap:10px}
+.gc-wd{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:13px;color:#777;font-weight:600;padding:6px 0;border-bottom:1px solid var(--line)}
+.gc-wd .sun{color:#d64545}.gc-wd .sat{color:#3a7bd5}
+.gc-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--line)}
+.gc-cell{min-height:104px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:5px 4px;cursor:pointer;transition:background .15s;overflow:hidden}
+.gcal-big .gc-cell{min-height:132px}
+.gc-cell:hover{background:#f4f7fc}
+.gc-cell.out{background:#fafbfd}.gc-cell.out .gc-d{color:#c5c5c5!important}
+.gc-d{display:inline-grid;place-items:center;width:26px;height:26px;font-size:13px;font-weight:600;border-radius:50%;color:#333}
+.gc-d.sun{color:#d64545}.gc-d.sat{color:#3a7bd5}
+.gc-cell.today .gc-d{background:var(--gri-orange);color:#fff!important}
+.gc-ev{display:block;font-size:11.5px;line-height:1.3;margin-top:3px;padding:2px 6px;border-radius:4px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gc-ev em{font-style:normal;opacity:.85;font-size:10.5px}
+.gc-ev:hover{filter:brightness(1.12)}
+.gc-more{display:block;font-size:11px;color:var(--primary);font-weight:700;margin-top:2px;padding-left:4px}
+.gc-legend{display:flex;gap:12px;margin-top:10px;font-size:12px;color:#666;flex-wrap:wrap}
+.gc-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+/* 모달 */
+.gcal-modal{position:fixed;inset:0;background:rgba(10,20,40,.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.gcal-box{background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:640px;max-height:90vh;overflow:auto;padding:24px 26px}
+.gcal-h{display:block;font-size:19px;margin-bottom:12px}
+.gcal-list{display:flex;flex-direction:column}
+.gcal-item{display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px dashed var(--line);color:#222}
+.gcal-item:hover{background:#f4f7fc}
+.gcal-item i{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.gcal-item em{font-style:normal;color:#666;font-size:13px;min-width:80px}
+.gcal-item span{flex:1;font-weight:600}
+.gcal-item small{color:#888;font-size:12px}
+.gcal-btns{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:16px}
+.gcal-type{display:inline-block;color:#fff;font-size:12px;padding:2px 8px;border-radius:4px}
+.gcal-detail h4{font-size:22px;margin:8px 0 6px;color:#222}
+.gcal-desc{margin-top:12px;line-height:1.8;white-space:normal}
+.gcal-form .form-tbl th{width:96px}
+.gcal-drop{border:2px dashed #b9c6de;border-radius:8px;padding:16px;text-align:center;color:#555;font-size:13px;background:#f8fafd;line-height:2}
+.gcal-drop.over{border-color:var(--primary);background:#eaf1fb}
+.gcal-files{list-style:none;margin:8px 0 0;padding:0;font-size:13px}
+.gcal-files li{padding:4px 0}
+@media (max-width:1024px){.home-dash{grid-template-columns:1fr}.cal-page{grid-template-columns:1fr}}
+@media (max-width:640px){.gc-cell{min-height:70px;padding:3px 2px}.gc-ev{font-size:10px;padding:1px 3px}.gc-ev em{display:none}.gcal-box{padding:16px}}
