@@ -589,3 +589,8 @@ form.board-search button.on,form.board-search button.line.on{background:var(--gr
 .link-cards .c1{background:linear-gradient(135deg,rgba(244,170,190,.5),rgba(250,205,215,.5))}
 .link-cards .c2{background:linear-gradient(135deg,rgba(232,196,90,.5),rgba(244,222,140,.5))}
 .link-cards .c3{background:linear-gradient(135deg,rgba(120,210,180,.5),rgba(170,230,205,.5))}
+/* 링크 카드 색 조정: 연보라 / 연겨자 / 톤다운 민트(하늘빛), 글자 진한 회색 */
+.link-cards a{color:#333}
+.link-cards a span{color:#555;opacity:1}
+.link-cards .c1{background:linear-gradient(135deg,rgba(196,180,232,.55),rgba(220,208,244,.55))}
+.link-cards .c3{background:linear-gradient(135deg,rgba(150,205,215,.5),rgba(190,225,232,.5))}
