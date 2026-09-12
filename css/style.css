@@ -456,10 +456,10 @@ form.board-search button.on,form.board-search button.line.on{background:var(--gr
 .btn.sm{padding:6px 12px;font-size:13px}
 
 /* ---------- 첫 화면: 바로가기(2×3) + 다가오는 일정 | 달력 ---------- */
-.home-dash{display:grid;grid-template-columns:minmax(0,1fr) 840px;gap:24px;align-items:start;margin-top:26px;position:relative;z-index:5}
+.home-dash{display:grid;grid-template-columns:minmax(0,1fr) 840px;gap:24px;align-items:stretch;margin-top:26px;position:relative;z-index:5}
 .home-side{display:flex;flex-direction:column;gap:16px}
 .quick.quick2{margin-top:0}
-.quick.quick2 ul{grid-template-columns:repeat(2,1fr)}
+.quick.quick2 ul{grid-template-columns:repeat(3,1fr)}
 .quick.quick2 li+li{border-left:0}
 .quick.quick2 li:nth-child(2n){border-left:1px solid var(--line)}
 .quick.quick2 li:nth-child(n+3){border-top:1px solid var(--line)}
@@ -552,3 +552,18 @@ form.board-search button.on,form.board-search button.line.on{background:var(--gr
 .lnb .gcal-upcoming.in-lnb{margin-top:16px;padding:16px}
 .lnb .gcal-upcoming.in-lnb h4{font-size:15px}
 .gcal-big .gc-cell{min-height:140px}
+
+/* 첫 화면 왼쪽: 아이콘 왼쪽·글자 오른쪽의 얇은 버튼, 달력은 왼쪽 열 높이에 맞춰 늘어남 */
+.quick.quick2 ul{gap:10px}
+.quick.quick2 a{flex-direction:row;justify-content:flex-start;gap:10px;padding:10px 14px;font-size:14px;border-radius:10px;border-bottom-width:2px}
+.quick.quick2 .ico{width:34px;height:34px;font-size:17px;flex-shrink:0}
+.home-side{gap:12px}
+.gcal-upcoming{flex:1}
+.home-cal{display:flex;flex-direction:column}
+.home-cal .gcal{display:flex;flex-direction:column;flex:1}
+.home-cal .gc-grid{flex:1;grid-auto-rows:1fr}
+.home-cal .gc-cell{min-height:96px}
+/* 3×2 배열: 칸이 좁아지므로 글자·여백을 조금 줄임 */
+.quick.quick2 a{padding:9px 10px;font-size:13.5px;gap:8px;white-space:nowrap}
+.quick.quick2 .ico{width:30px;height:30px;font-size:15px}
+@media (max-width:1280px){.quick.quick2 ul{grid-template-columns:repeat(2,1fr)}}

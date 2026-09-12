@@ -1,5 +1,5 @@
 /* 노동조합 일정 달력 (첫 화면 + GRI > 일정 달력)
-   - Supabase events 표(관리자 작성) + data/gcal.json(구글 캘린더 [GRILU] 공개 주소에서 자동 수집)을 함께 표시
+   - Supabase events 표 하나로 표시 (구글 캘린더 [GRILU] 일정도 관리자 브라우저의 양방향 동기화(js/gcal.js)로 이 표에 들어옴)
    - 날짜 칸을 누르면 그날 일정 목록 / 관리자는 바로 일정 추가
    - 일정 추가·수정 창: 파일 선택, 끌어다 놓기, 캡처 이미지·파일 붙여넣기(Ctrl+V) 로 첨부
    - 첨부가 있으면 [자료마당 > 회의자료] 게시판에 같은 제목의 글을 자동으로 올리고 서로 연결 */
@@ -25,10 +25,9 @@
     var p1 = (window.DB && DB.ready) ? DB.client.from('events').select('*').order('date').then(function (r) {
       return (r.error || !r.data) ? (window.GRILU_EVENTS || []).map(function (e) { return { date: e.date, end: e.end, title: e.title, type: e.type, description: e.desc }; }) : r.data;
     }) : Promise.resolve((window.GRILU_EVENTS || []).map(function (e) { return { date: e.date, end: e.end, title: e.title, type: e.type, description: e.desc }; }));
-    var p2 = fetch(root() + 'data/gcal.json?v=' + Math.floor(Date.now() / 900000)).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; });
-    return Promise.all([p1, p2]).then(function (res) {
-      events = (res[0] || []).map(function (e) { e.end = e.end || e.end_date || e.date; return e; });
-      gcal = (res[1] || []).map(function (e) { return { gcal: true, date: e.date, end: e.end || e.date, title: e.title, type: 'gcal', time: e.time || '', place: e.place || '', description: e.desc || '' }; });
+    return p1.then(function (list) {
+      events = (list || []).map(function (e) { e.end = e.end || e.end_date || e.date; return e; });
+      gcal = [];
       loaded = true;
     });
   }
@@ -86,13 +85,14 @@
         return '<li><a href="' + esc(a.url) + '" target="_blank" rel="noopener">&#128206; ' + esc(a.name) + '</a> <span class="note">(' + Math.round((a.size || 0) / 1024) + ' KB)</span></li>';
       }).join('') + '</ul></div>' : '<p class="note" style="margin-top:12px">첨부자료 없음</p>') +
       (e.post_id ? '<p style="margin-top:12px"><a href="' + root() + 'board/view.html?id=' + e.post_id + '" class="btn sm line">&#128196; 회의자료 게시판에서 보기</a></p>' : '') +
-      (e.gcal ? '<p class="note" style="margin-top:10px">구글 캘린더 [GRILU]에서 자동으로 가져온 일정입니다.</p>' : '') +
-      '</div><div class="gcal-btns">' + (canEdit() && !e.gcal ? '<a href="#" class="btn sm gcal-edit">수정</a> <a href="#" class="btn sm gcal-del" style="background:#c33">삭제</a>' : '') + '<a href="#" class="btn sm line gcal-close">닫기</a></div>');
+      (e.gcal_id ? '<p class="note" style="margin-top:10px">구글 캘린더 [GRILU]와 연결된 일정입니다. 여기서 고치거나 지우면 구글에도, 구글에서 고치면 여기에도 반영됩니다.</p>' : '') +
+      '</div><div class="gcal-btns">' + (canEdit() && e.id ? '<a href="#" class="btn sm gcal-edit">수정</a> <a href="#" class="btn sm gcal-del" style="background:#c33">삭제</a>' : '') + '<a href="#" class="btn sm line gcal-close">닫기</a></div>');
     m.querySelectorAll('.gcal-thumb').forEach(function (a) { a.onclick = function (ev) { ev.preventDefault(); lightbox(atts[+a.getAttribute('data-zoom')].url, a.getAttribute('title')); }; });
     var ed = m.querySelector('.gcal-edit'); if (ed) ed.onclick = function (ev) { ev.preventDefault(); editEvent(e, redraw); };
     var dl = m.querySelector('.gcal-del'); if (dl) dl.onclick = function (ev) {
       ev.preventDefault(); if (!confirm('이 일정을 삭제할까요?' + (e.post_id ? '\n(회의자료 게시판의 글은 남습니다)' : ''))) return;
-      DB.client.from('events').delete().eq('id', e.id).then(function (r) { if (r.error) return alert('삭제 실패: ' + r.error.message); m.shut(); loadAll().then(redraw); });
+      var gone = (window.GCAL && e.gcal_id) ? GCAL.remove(e.gcal_id) : Promise.resolve();
+      gone.then(function () { return DB.client.from('events').delete().eq('id', e.id); }).then(function (r) { if (r.error) return alert('삭제 실패: ' + r.error.message); m.shut(); loadAll().then(redraw); });
     };
   }
 
@@ -100,7 +100,7 @@
   function editEvent(e, redraw) {
     e = e || {}; var isNew = !e.id;
     var pending = [], existing = (e.attachments || []).slice();
-    var types = Object.keys(TYPE).filter(function (k) { return k !== 'gcal'; });
+    var types = Object.keys(TYPE);
     var sp = splitPrefix(e.title);
     var m = modal('<form class="gcal-form"><b class="gcal-h">' + (isNew ? '일정 추가' : '일정 수정') + '</b>' +
       '<table class="tbl form-tbl">' +
@@ -153,7 +153,7 @@
 
     form.onsubmit = function () {
       var btn = form.querySelector('button[type=submit]'); btn.disabled = true; msg.textContent = '저장 중…';
-      var row = { title: ((form.prefix.value ? form.prefix.value + ' ' : '') + form.title.value.trim()).trim(), date: form.date.value, end_date: form.end.value || null, time: form.time.value.trim() || null, place: form.place.value.trim() || null, type: form.type.value, description: form.description.value.trim() || null };
+      var row = { updated_at: new Date().toISOString(), title: ((form.prefix.value ? form.prefix.value + ' ' : '') + form.title.value.trim()).trim(), date: form.date.value, end_date: form.end.value || null, time: form.time.value.trim() || null, place: form.place.value.trim() || null, type: form.type.value, description: form.description.value.trim() || null };
       if (!row.title || !row.date) { alert('제목과 날짜를 입력하세요.'); btn.disabled = false; msg.textContent = ''; return false; }
       Promise.all(pending.map(function (f) { return DB.upload(f, 'events'); })).then(function (up) {
         row.attachments = existing.concat(up);
@@ -237,12 +237,13 @@
       }).join('') + '</ul>' : '<p class="note" style="padding:16px 0">앞으로 잡힌 일정이 없습니다.</p>');
       upBox.querySelectorAll('.up-item').forEach(function (a, i) { a.onclick = function (ev) { ev.preventDefault(); showEvent(list[i], draw); }; });
     }
+    var origLoad = loadAll;
     function gsync(interactive, btn) {
       if (!(window.GCAL && GCAL.ready())) return;
-      GCAL.sync(events, interactive).then(function (r) {
-        gcal = (r.list || []).map(function (e) { return { gcal: true, date: e.date, end: e.end || e.date, title: e.title, type: 'gcal', time: e.time || '', place: e.place || '', description: e.desc || '' }; });
-        draw();
-        var b = box.querySelector('.gc-gcal'); if (b) b.innerHTML = '&#9989; GRILU 동기화됨 (추가 ' + r.n.add + ' · 수정 ' + r.n.upd + ' · 삭제 ' + r.n.del + ')';
+      GCAL.sync(DB.client, interactive).then(function (n) {
+        var changed = n.add + n.upd + n.del + n.pullAdd + n.pullUpd + n.pullDel;
+        var b = box.querySelector('.gc-gcal'); if (b) b.innerHTML = '&#9989; GRILU 동기화됨' + (changed ? ' (→구글 ' + (n.add + n.upd + n.del) + ' · ←구글 ' + (n.pullAdd + n.pullUpd + n.pullDel) + ')' : '');
+        if (n.pullAdd + n.pullUpd + n.pullDel + n.add) return origLoad().then(draw);
       }).catch(function (e) {
         var msg = String(e && e.message || e);
         var b = box.querySelector('.gc-gcal'); if (b) b.innerHTML = '&#128279; 구글 캘린더 [GRILU] 잇기' + (interactive ? ' <span class="note" style="color:#c33">(' + esc(msg.indexOf('origin') >= 0 || msg.indexOf('idpiframe') >= 0 ? 'Google Cloud 콘솔의 승인된 원본에 https://grilu.kr 추가 필요' : msg.slice(0, 80)) + ')</span>' : '');
@@ -253,7 +254,7 @@
     loadAll().then(draw);
     document.addEventListener('db:ready', function () { loadAll().then(function () { draw(); if (canEdit() && window.GCAL && GCAL.ready() && GCAL.linked()) gsync(false); }); });
     // 일정 저장·삭제 뒤에도 (이어져 있으면) 조용히 구글에 반영
-    var origLoad = loadAll; loadAll = function () { return origLoad().then(function () { if (canEdit() && window.GCAL && GCAL.ready() && GCAL.linked() && loaded) setTimeout(function () { gsync(false); }, 300); }); };
+    loadAll = function () { return origLoad().then(function () { if (canEdit() && window.GCAL && GCAL.ready() && GCAL.linked() && loaded) setTimeout(function () { gsync(false); }, 300); }); };
   }
   boxes.forEach(init);
 })();
