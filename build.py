@@ -221,15 +221,17 @@ SAMPLE = [("2026-09-10", 128), ("2026-09-05", 96), ("2026-08-28", 210), ("2026-0
 
 # ------------------------------------------------------------------ 각 페이지 본문
 def p_greeting(root):
-    return """
+    return f"""
 <p class="lead">존경하는 경기연구원 조합원 여러분, 그리고 홈페이지를 찾아주신 모든 분께 감사드립니다.</p>
 <p>경기연구원 노동조합은 연구원 구성원의 노동 권익을 지키고, 자율적이고 창의적인 연구 환경을 만들기 위해 활동하고 있습니다.
 연구자와 직원 모두가 존중받는 일터, 공정하고 투명한 인사와 보수 제도, 그리고 일과 삶의 균형을 위해 노사가 함께 고민하고 실천하겠습니다.</p>
 <p>노동조합은 조합원 한 분 한 분의 목소리에서 출발합니다. 현장의 어려움과 제안을 언제든 노동조합에 전해 주십시오.
 소통상담, 조합원 자유게시판, 그리고 정기적인 간담회를 통해 여러분과 소통하고, 노사협의회와 교섭을 통해 실질적인 변화를 만들어가겠습니다.</p>
 <p>경기도민을 위한 정책연구라는 우리의 사명을 자랑스럽게 수행할 수 있도록, 노동조합이 든든한 울타리가 되겠습니다. 감사합니다.</p>
-<div class="box" style="text-align:right"><b>경기연구원 노동조합 위원장</b> &nbsp; <span style="font-size:20px;font-weight:800">○ ○ ○</span></div>
-<p class="note">※ 인사말 내용과 위원장 성함은 예시입니다. 실제 내용으로 교체해 주세요.</p>
+<div class="chair">
+  <figure class="chair-photo"><img src="{root}images/chair.jpg" alt="옥진아 위원장" onerror="this.parentNode.classList.add('none')"></figure>
+  <div class="chair-txt"><small>경기연구원 노동조합 위원장</small><b>옥진아</b><span>도시주택연구실 · 선임연구위원</span></div>
+</div>
 """
 
 def p_officers(root):
@@ -917,7 +919,7 @@ def index():
   <div class="wrap">
     <div class="sec-head"><h3><small>At a Glance</small>한눈에 보는 노동조합</h3></div>
     <div class="glance">
-      <div class="item"><small>위원장</small><b>○○○</b><p>제○기 집행부 (2026~2027)</p></div>
+      <div class="item"><small>위원장</small><b>옥진아</b><p>도시주택연구실 · 선임연구위원</p></div>
       <div class="item"><small>조합원</small><b>○○○명</b><p>연구직·행정직·전문직</p></div>
       <div class="item"><small>노사협의회</small><b>분기 1회</b><p>근로자위원 ○명 참여</p></div>
       <div class="item"><small>설립</small><b>20○○년</b><p>경기연구원 노동조합 설립</p></div>
