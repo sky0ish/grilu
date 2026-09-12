@@ -582,3 +582,10 @@ form.board-search button.on,form.board-search button.line.on{background:var(--gr
 /* 바로가기 버튼 더 크게 */
 .quick.quick2 a{padding:34px 16px;font-size:16px;gap:12px}
 .quick.quick2 .ico{width:52px;height:52px;font-size:24px}
+/* 첫 화면 링크 카드: 반투명 파스텔 (연핑크 / 연겨자 / 민트), 글자는 진하게 */
+.link-cards a{color:#2b3350;border:1px solid rgba(255,255,255,.7);box-shadow:0 4px 12px rgba(20,40,90,.08);transition:transform .15s,box-shadow .15s}
+.link-cards a span{opacity:.75;color:#3a4260}
+.link-cards a:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(20,40,90,.14)}
+.link-cards .c1{background:linear-gradient(135deg,rgba(244,170,190,.5),rgba(250,205,215,.5))}
+.link-cards .c2{background:linear-gradient(135deg,rgba(232,196,90,.5),rgba(244,222,140,.5))}
+.link-cards .c3{background:linear-gradient(135deg,rgba(120,210,180,.5),rgba(170,230,205,.5))}
