@@ -20,9 +20,12 @@
     if (kind === 'counsel') loadCounsel();
   });
 
+  function gradeOf(p) { return p.role === 'admin' ? 'admin' : !p.approved ? 'pending' : (p.role === 'associate' ? 'associate' : 'member'); }
+  var GRADE_NAME = { pending: '대기', member: '회원', associate: '준회원', admin: '관리자' };
   function statusBadge(p) {
-    if (p.role === 'admin') return '<span class="st-badge admin">관리자</span>';
-    return p.approved ? '<span class="st-badge ok">승인</span>' : '<span class="st-badge wait">대기</span>';
+    var g = gradeOf(p);
+    var cls = g === 'admin' ? 'admin' : g === 'pending' ? 'wait' : g === 'associate' ? 'assoc' : 'ok';
+    return '<span class="st-badge ' + cls + '">' + GRADE_NAME[g] + '</span>';
   }
 
   // ---------- 대시보드 ----------
@@ -46,7 +49,7 @@
 
   // ---------- 회원관리 ----------
   var members = [];
-  var TABS = [['pending', '승인 대기'], ['approved', '승인됨'], ['admin', '관리자'], ['all', '전체']];
+  var TABS = [['pending', '승인 대기'], ['approved', '회원'], ['associate', '준회원'], ['admin', '관리자'], ['all', '전체']];
   function initMembers() {
     var q = new URLSearchParams(location.search);
     var filter = document.getElementById('memberFilter');
@@ -65,22 +68,103 @@
       '.mtab .n{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:999px;background:#eee;color:#555;font-size:12px;line-height:20px;text-align:center}' +
       '.mtab.on{background:var(--primary,#1f3f8f);border-color:var(--primary,#1f3f8f);color:#fff}.mtab.on .n{background:rgba(255,255,255,.25);color:#fff}' +
       '.mtab[data-k=pending] .n.has{background:#fde8e8;color:#c33}.mtab.on[data-k=pending] .n.has{background:#fff;color:#c33}' +
-      '.tbl .btn.line.sm{background:#fff;color:#333;border:1px solid #cfc8c0}.tbl .btn.line.sm:hover{border-color:var(--primary,#1f3f8f);color:var(--primary,#1f3f8f)}';
+      '.tbl .btn.line.sm{background:#fff;color:#333;border:1px solid #cfc8c0}.tbl .btn.line.sm:hover{border-color:var(--primary,#1f3f8f);color:var(--primary,#1f3f8f)}' +
+      '.st-badge.assoc{background:#e8eef9;color:#1f3f8f}' +
+      '.tbl input.inline{border-color:#e3ded8;background:#fff}.tbl input.inline:hover{border-color:#b9b2aa}' +
+      '.roster{margin:0 0 14px;padding:12px 14px;border:1px solid #e3ded8;border-radius:8px;background:#faf8f5;font-size:13px}.roster summary{cursor:pointer;font-weight:700}' +
+      '.roster textarea{width:100%;min-height:90px;margin:8px 0;font:inherit;font-size:13px;padding:8px;border:1px solid #cfc8c0;border-radius:6px}.roster .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.roster .cnt{color:#666}';
     document.head.appendChild(st);
     nav.querySelectorAll('.mtab').forEach(function (b) { b.onclick = function () { filter.value = b.getAttribute('data-k'); renderMembers(); }; });
+    initRoster(nav);
     loadMembers();
   }
-  function isPending(p) { return !p.approved && p.role !== 'admin'; }
   function paintTabs() {
     var f = document.getElementById('memberFilter').value;
-    var n = { pending: 0, approved: 0, admin: 0, all: members.length };
-    members.forEach(function (p) { if (p.role === 'admin') n.admin++; else if (p.approved) n.approved++; else n.pending++; });
+    var n = { pending: 0, approved: 0, associate: 0, admin: 0, all: members.length };
+    members.forEach(function (p) { var g = gradeOf(p); n[g === 'member' ? 'approved' : g]++; });
     document.querySelectorAll('#memberTabs .mtab').forEach(function (b) {
       var k = b.getAttribute('data-k');
       b.classList.toggle('on', k === f);
       var nb = b.querySelector('.n'); nb.textContent = n[k]; nb.classList.toggle('has', k === 'pending' && n[k] > 0);
     });
   }
+
+  /* ── 노조 회원 명단 대조 ──
+     「노조회원 명단을 공유할테니 비교해서 그 안에 있으면 회원으로 아니면 준회원으로」
+     명단은 union_roster 표(관리자만)에 두고, 「명단 대조 승인」 을 누르면 대기자 모두를
+     명단에 있으면 회원, 없으면 준회원으로 승인합니다. 이름·이메일 어느 쪽이든 맞으면 있는 것으로 봅니다. */
+  var roster = [];
+  var rkey = function (v) { return String(v || '').trim().toLowerCase().replace(/\s+/g, ''); };
+  function initRoster(nav) {
+    var box = document.createElement('details'); box.className = 'roster'; box.id = 'rosterBox';
+    box.innerHTML = '<summary>노조 회원 명단 대조 <span class="cnt" id="rosterCnt"></span></summary>' +
+      '<p class="note" style="margin:6px 0 0">한 줄에 한 사람 — 이름, 이메일, 또는 「이름, 이메일」. 저장하면 명단이 바뀌고(덮어씀), ' +
+      '「명단 대조 승인」 은 승인 대기인 분을 명단에 있으면 <b>회원</b>, 없으면 <b>준회원</b>으로 한 번에 승인합니다.</p>' +
+      '<textarea id="rosterText" placeholder="홍길동\nkim@gri.re.kr\n이영희, lee@gri.re.kr"></textarea>' +
+      '<div class="row"><button type="button" class="btn sm" id="rosterSave">명단 저장</button>' +
+      '<button type="button" class="btn line sm" id="rosterApprove">명단 대조 승인 (대기자 전체)</button>' +
+      '<span class="cnt" id="rosterMsg"></span></div>';
+    nav.parentNode.insertBefore(box, nav);
+    document.getElementById('rosterSave').onclick = saveRoster;
+    document.getElementById('rosterApprove').onclick = approveByRoster;
+    loadRoster();
+  }
+  function loadRoster() {
+    DB.client.from('union_roster').select('key,name,email').then(function (r) {
+      var cnt = document.getElementById('rosterCnt'), ta = document.getElementById('rosterText');
+      if (r.error) { cnt.textContent = '(명단 표가 아직 없습니다 — supabase/roster.sql 을 실행하세요)'; return; }
+      roster = r.data || [];
+      cnt.textContent = roster.length ? '· ' + roster.length + '명' : '· 아직 없음';
+      if (ta && !ta.value) ta.value = roster.map(function (x) { return [x.name, x.email].filter(Boolean).join(', '); }).join('\n');
+    });
+  }
+  function parseRoster(text) {
+    var out = {};
+    String(text || '').split(/\r?\n/).forEach(function (line) {
+      var parts = line.split(/[,\t;]/).map(function (x) { return x.trim(); }).filter(Boolean);
+      if (!parts.length) return;
+      var email = parts.filter(function (x) { return /@/.test(x); })[0] || '';
+      var name = parts.filter(function (x) { return !/@/.test(x); })[0] || '';
+      var key = rkey(email || name);
+      if (key) out[key] = { key: key, name: name, email: email.toLowerCase() };
+    });
+    return Object.keys(out).map(function (k) { return out[k]; });
+  }
+  function saveRoster() {
+    var rows = parseRoster(document.getElementById('rosterText').value);
+    var msg = document.getElementById('rosterMsg');
+    if (!rows.length && !confirm('명단이 비어 있습니다. 모두 지울까요?')) return;
+    DB.client.from('union_roster').delete().neq('key', '').then(function (r) {
+      if (r.error) { msg.textContent = '실패: ' + r.error.message; return; }
+      if (!rows.length) { msg.textContent = '명단을 비웠습니다.'; loadRoster(); return; }
+      DB.client.from('union_roster').insert(rows).then(function (r2) {
+        msg.textContent = r2.error ? '실패: ' + r2.error.message : rows.length + '명을 저장했습니다.';
+        loadRoster();
+      });
+    });
+  }
+  function inRoster(p) {
+    var e = rkey(p.email), n = rkey(p.name);
+    return roster.some(function (x) { return (x.email && rkey(x.email) === e) || (x.name && n && rkey(x.name) === n); });
+  }
+  function approveByRoster() {
+    var pend = members.filter(isPending);
+    var msg = document.getElementById('rosterMsg');
+    if (!pend.length) { msg.textContent = '승인 대기인 분이 없습니다.'; return; }
+    if (!roster.length && !confirm('명단이 비어 있어 모두 준회원이 됩니다. 계속할까요?')) return;
+    var yes = pend.filter(inRoster), no = pend.filter(function (p) { return !inRoster(p); });
+    if (!confirm('대기 ' + pend.length + '명을 승인합니다.\n회원(명단에 있음) ' + yes.length + '명: ' + yes.map(function (p) { return p.name || p.email; }).join(', ') +
+                 '\n준회원(명단에 없음) ' + no.length + '명: ' + no.map(function (p) { return p.name || p.email; }).join(', '))) return;
+    var jobs = pend.map(function (p) {
+      return DB.client.from('profiles').update({ role: inRoster(p) ? 'member' : 'associate', approved: true }).eq('id', p.id);
+    });
+    Promise.all(jobs).then(function (rs) {
+      var bad = rs.filter(function (r) { return r.error; });
+      msg.textContent = bad.length ? '일부 실패: ' + bad[0].error.message : '회원 ' + yes.length + '명 · 준회원 ' + no.length + '명 승인했습니다.';
+      loadMembers();
+    });
+  }
+  function isPending(p) { return !p.approved && p.role !== 'admin'; }
   function loadMembers() {
     DB.client.from('profiles').select('*').order('created_at', { ascending: false }).then(function (r) {
       var tb = document.querySelector('#memberTbl tbody');
@@ -93,7 +177,8 @@
     var f = document.getElementById('memberFilter').value;
     return members.filter(function (p) {
       if (f === 'pending' && (p.approved || p.role === 'admin')) return false;
-      if (f === 'approved' && !(p.approved && p.role !== 'admin')) return false;
+      if (f === 'approved' && gradeOf(p) !== 'member') return false;
+      if (f === 'associate' && gradeOf(p) !== 'associate') return false;
       if (f === 'admin' && p.role !== 'admin') return false;
       if (kw && ((p.name || '') + ' ' + (p.email || '') + ' ' + (p.dept || '') + ' ' + (p.position || '')).toLowerCase().indexOf(kw) < 0) return false;
       return true;
@@ -111,7 +196,7 @@
     var me = DB.user.id;
     tb.innerHTML = list.map(function (p) {
       var self = p.id === me;
-      var grade = p.role === 'admin' ? 'admin' : (p.approved ? 'member' : 'pending');
+      var grade = gradeOf(p);
       return '<tr data-id="' + p.id + '">' +
         '<td><input class="inline" data-f="name" value="' + esc(p.name || '') + '"></td>' +
         '<td style="text-align:left">' + esc(p.email) + (self ? ' <span class="note">(나)</span>' : '') + '</td>' +
@@ -119,13 +204,15 @@
         '<td><select class="inline" data-f="position">' + '<option value="">-</option>' + '<option' + (p.position === '선임연구위원' ? ' selected' : '') + '>선임연구위원</option>' + '<option' + (p.position === '연구위원' ? ' selected' : '') + '>연구위원</option>' + '<option' + (p.position === '선임연구원' ? ' selected' : '') + '>선임연구원</option>' + '<option' + (p.position === '연구원' ? ' selected' : '') + '>연구원</option>' + '<option' + (p.position === '행정직' ? ' selected' : '') + '>행정직</option>' + '</select></td>' +
         '<td>' + fmt(p.created_at) + '</td><td>' + statusBadge(p) + '</td>' +
         '<td>' + (self ? '<span class="note">본인</span> ' :
-          '<select class="inline" data-f="grade" style="width:auto" title="구분: 승인 대기 / 회원 / 관리자">' +
+          '<select class="inline" data-f="grade" style="width:auto" title="구분: 승인 대기 / 회원 / 준회원 / 관리자">' +
             '<option value="pending"' + (grade === 'pending' ? ' selected' : '') + '>대기(미승인)</option>' +
             '<option value="member"' + (grade === 'member' ? ' selected' : '') + '>회원</option>' +
+            '<option value="associate"' + (grade === 'associate' ? ' selected' : '') + '>준회원</option>' +
             '<option value="admin"' + (grade === 'admin' ? ' selected' : '') + '>관리자</option></select> ') +
         '<button class="btn sm" data-act="save">' + (grade === 'pending' && !self ? '가입 승인' : '저장') + '</button> ' +
         /* 고르개를 거치지 않고 한 번에 — 「내가 회원에서 관리자로 올릴 수 있게」 */
-        (self ? '' : grade === 'member' ? '<button class="btn line sm" data-act="admin">관리자로</button> <button class="btn line sm" data-act="revoke">승인 취소</button> '
+        (self ? '' : grade === 'member' ? '<button class="btn line sm" data-act="associate">준회원으로</button> <button class="btn line sm" data-act="admin">관리자로</button> <button class="btn line sm" data-act="revoke">승인 취소</button> '
+              : grade === 'associate' ? '<button class="btn line sm" data-act="member">회원으로</button> <button class="btn line sm" data-act="admin">관리자로</button> <button class="btn line sm" data-act="revoke">승인 취소</button> '
               : grade === 'admin' ? '<button class="btn line sm" data-act="unadmin">관리자 해제</button> ' : '') +
         (self ? '' : '<button class="btn sm danger" data-act="delete">탈퇴</button>') +
         '</td></tr>';
@@ -137,11 +224,11 @@
         var done = function (r) { if (r && r.error) alert('실패: ' + r.error.message); loadMembers(); };
         if (act === 'save') {
           var patch = { name: tr.querySelector('[data-f=name]').value.trim(), dept: tr.querySelector('[data-f=dept]').value.trim(), position: tr.querySelector('[data-f=position]').value || null };
-          var gsel = tr.querySelector('[data-f=grade]'), g = gsel ? gsel.value : null, cur = p.role === 'admin' ? 'admin' : (p.approved ? 'member' : 'pending');
+          var gsel = tr.querySelector('[data-f=grade]'), g = gsel ? gsel.value : null, cur = gradeOf(p);
           if (g && g !== cur) {
             if (g === 'admin' && !confirm(p.email + ' 회원을 관리자로 지정할까요? (회원 관리·일정·게시판 관리 권한)')) return;
             if (g === 'pending' && !confirm(p.email + ' 회원의 승인을 취소할까요?')) return;
-            patch.role = g === 'admin' ? 'admin' : 'member'; patch.approved = g !== 'pending';
+            patch.role = g === 'admin' ? 'admin' : g === 'associate' ? 'associate' : 'member'; patch.approved = g !== 'pending';
           }
           return DB.client.from('profiles').update(patch).eq('id', id).then(function (r) { if (r.error) alert(r.error.message); else if (g && g !== cur) loadMembers(); else { b.textContent = '저장됨'; setTimeout(function () { b.textContent = '저장'; }, 1200); p.name = patch.name; p.dept = patch.dept; p.position = patch.position; } });
         }
@@ -149,6 +236,8 @@
         if (act === 'revoke') { if (!confirm(p.email + ' 회원의 승인을 취소할까요?')) return; return DB.client.from('profiles').update({ approved: false }).eq('id', id).then(done); }
         if (act === 'admin') { if (!confirm(p.email + ' 회원을 관리자로 지정할까요?')) return; return DB.client.from('profiles').update({ role: 'admin', approved: true }).eq('id', id).then(done); }
         if (act === 'unadmin') { if (!confirm('관리자 권한을 해제할까요? (승인 조합원으로 남습니다)')) return; return DB.client.from('profiles').update({ role: 'member' }).eq('id', id).then(done); }
+        if (act === 'member') return DB.client.from('profiles').update({ role: 'member', approved: true }).eq('id', id).then(done);
+        if (act === 'associate') return DB.client.from('profiles').update({ role: 'associate', approved: true }).eq('id', id).then(done);
         if (act === 'delete') {
           if (!confirm(p.email + ' 회원을 탈퇴 처리할까요?\n홈페이지 회원 정보가 삭제되고 조합원 권한이 사라집니다.')) return;
           return DB.client.from('profiles').delete().eq('id', id).then(done);
@@ -158,7 +247,7 @@
   }
   function exportCsv() {
     var rows = [['성명', '이메일', '소속', '직급', '상태', '가입일']].concat(filtered().map(function (p) {
-      return [p.name || '', p.email || '', p.dept || '', p.position || '', p.role === 'admin' ? '관리자' : (p.approved ? '승인' : '대기'), fmt(p.created_at)];
+      return [p.name || '', p.email || '', p.dept || '', p.position || '', GRADE_NAME[gradeOf(p)], fmt(p.created_at)];
     }));
     var csv = '﻿' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
     var a = document.createElement('a');

@@ -358,9 +358,10 @@
         return;
       }
       if (!r.data.length && !q && page === 1) {
-        DB.client.from('boards').select('members_only').eq('code', code).maybeSingle().then(function (b) {
-          if (b.data && b.data.members_only && !DB.isMember()) {
-            tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#c33">조합원 전용 게시판입니다. 로그인(조합원 승인) 후 이용해 주세요.</td></tr>';
+        DB.client.from('boards').select('members_only,associate_hidden').eq('code', code).maybeSingle().then(function (b) {
+          var hidden = b.data && ((b.data.members_only && !DB.isMember()) || (b.data.associate_hidden && DB.isAssociate()));
+          if (hidden) {
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:40px;color:#c33">' + (DB.isAssociate() ? '준회원은 이 게시판을 볼 수 없습니다. 관리자가 회원으로 바꿔 드리면 볼 수 있습니다.' : '조합원 전용 게시판입니다. 로그인(조합원 승인) 후 이용해 주세요.') + '</td></tr>';
             if (cnt) cnt.textContent = '-';
             var pg = document.querySelector('.paging'); if (pg) pg.innerHTML = '';
             var n2 = document.querySelector('.static-note'); if (n2) n2.remove();
@@ -441,7 +442,8 @@
     if (!btn) return;
     DB.client.from('boards').select('admin_only_write,members_only').eq('code', code).maybeSingle().then(function (r) {
       var b = r.data || {};
-      var can = DB.isAdmin() || (DB.isMember() && !b.admin_only_write);
+      /* 관리자와 회원은 어느 게시판이든 씁니다 — 준회원은 보기만 */
+      var can = DB.isAdmin() || DB.isFull();
       btn.style.display = can ? '' : 'none';
       btn.href = writeUrl(code);
     });
@@ -707,7 +709,7 @@
         var thumb = img ? '<img src="' + esc(img.url) + '" alt="">' : (yt ? '<img src="https://img.youtube.com/vi/' + yt[1] + '/hqdefault.jpg" alt="">' : (code === 'video' ? '&#9654;' : '&#128247;'));
         return '<a href="' + viewUrl(p.id) + '"><div class="thumb">' + thumb + '</div><div class="cap">' + esc(p.title) + '<span>' + fmt(p.created_at) + '</span></div></a>';
       }).join('');
-      var btn = document.querySelector('.board-bottom .btn'); if (btn) { btn.href = writeUrl(code); btn.style.display = DB.isAdmin() ? '' : 'none'; }
+      var btn = document.querySelector('.board-bottom .btn'); if (btn) { btn.href = writeUrl(code); btn.style.display = (DB.isAdmin() || DB.isFull()) ? '' : 'none'; }
     });
   }
 

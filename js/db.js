@@ -29,6 +29,19 @@
     qs: function (k) { return new URLSearchParams(location.search).get(k); },
     isAdmin: function () { return !!(DB.profile && DB.profile.role === 'admin'); },
     isMember: function () { return !!(DB.profile && (DB.profile.approved || DB.profile.role === 'admin')); },
+    /* 회원 종류 — 관리자: 모든 것 / 회원: 보고 쓰기 / 준회원: 보기만(자료마당·소통마당은 못 봄) */
+    isFull: function () { return !!(DB.profile && (DB.profile.role === 'admin' || (DB.profile.approved && DB.profile.role === 'member'))); },
+    isAssociate: function () { return !!(DB.profile && DB.profile.approved && DB.profile.role === 'associate'); },
+    gradeName: function () { return DB.isAdmin() ? '관리자' : DB.isAssociate() ? '준회원' : DB.isMember() ? '회원' : '승인 대기'; },
+    /* 준회원이 자료마당·소통마당 화면을 열면 내용 대신 안내를 보입니다 */
+    HIDE_FOR_ASSOCIATE: /\/(archive|community)\//,
+    gatePage: function () {
+      if (!DB.isAssociate() || !DB.HIDE_FOR_ASSOCIATE.test(location.pathname)) return;
+      var main = document.querySelector('main.content') || document.querySelector('main');
+      if (main) main.innerHTML = '<div class="wrap" style="padding:60px 0;text-align:center;color:#555;line-height:1.9">' +
+        '<b style="font-size:18px;color:#c33">준회원은 자료마당·소통마당을 볼 수 없습니다.</b><br>조합 가입 후 관리자가 회원으로 바꿔 드리면 볼 수 있습니다.<br>' +
+        '<a href="' + DB.root + 'index.html" class="btn" style="margin-top:14px">첫 화면으로</a></div>';
+    },
 
     // 현재 로그인 사용자 + 프로필 로드
     loadUser: function () {
@@ -51,7 +64,7 @@
       if (!ready) return; // 정적 모드: 그대로 둠
       if (DB.user) {
         var name = (DB.profile && DB.profile.name) || DB.user.email;
-        var status = DB.isAdmin() ? ' <b style="color:var(--gri-orange)">관리자</b>' : (DB.isMember() ? '' : ' <span style="color:#c33">(승인 대기)</span>');
+        var status = DB.isAdmin() ? ' <b style="color:var(--gri-orange)">관리자</b>' : DB.isAssociate() ? ' <span style="color:#1f3f8f">(준회원)</span>' : (DB.isMember() ? '' : ' <span style="color:#c33">(승인 대기)</span>');
         util.innerHTML = '<span style="padding:0 10px;color:#333">' + DB.esc(name) + '님' + status + '</span>' +
           (DB.isAdmin() ? '<a href="' + root + 'admin/members.html" id="memberMgrLink">회원관리</a>' : '') +
           '<a href="' + root + 'member/mypage.html">내 정보</a>' +
@@ -106,7 +119,7 @@
 
   // 초기화: 사용자 로드 후 이벤트 발행
   // 다른 스크립트(main/board/auth/admin)가 리스너를 등록한 뒤에 이벤트를 발생시킴
-  function fire() { DB.renderUtil(); document.dispatchEvent(new CustomEvent('db:ready')); }
+  function fire() { DB.renderUtil(); DB.gatePage(); document.dispatchEvent(new CustomEvent('db:ready')); }
   DB.init = DB.loadUser().then(function () {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fire);
     else setTimeout(fire, 0);
