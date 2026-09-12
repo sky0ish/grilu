@@ -7,7 +7,7 @@
   var boxes = document.querySelectorAll('.gcal');
   if (!boxes.length) return;
   var cfg = window.GRILU_CONFIG || {};
-  var TYPE = { union: ['노조', '#1f398f'], council: ['노사협의회', '#1f7a54'], event: ['행사', '#b86400'], holiday: ['휴일', '#c33'], meeting: ['회의', '#6b3fa0'], gcal: ['GRILU 캘린더', '#4285f4'] };
+  var TYPE = { union: ['노조', 'rgba(96,124,200,.45)'], council: ['노사협의회', 'rgba(72,168,130,.45)'], event: ['행사', 'rgba(230,170,70,.45)'], holiday: ['휴일', 'rgba(228,110,110,.45)'], meeting: ['회의', 'rgba(160,120,210,.45)'], gcal: ['GRILU 캘린더', 'rgba(90,160,235,.45)'] };
   var WEEK = ['일', '월', '화', '수', '목', '금', '토'];
   var MEET_BOARD = 'delegate';   // 회의자료 게시판 코드
   var PREFIX = ['[대의원정례회의]', '[임시대의원회의]', '[집행부회의]', '[운영위원회]', '[노사협의회]', '[단체교섭]', '[교육]', '[행사]', '[기타회의]'];

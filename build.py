@@ -879,7 +879,7 @@ def index():
         <li><a href="archive/council.html"><span class="ico">&#129309;</span>노사협의회</a></li>
         <li><a href="archive/rules.html"><span class="ico">&#128220;</span>규약·규정</a></li>
       </ul></nav>
-      <div class="card gcal-upcoming" data-limit="6"><h4>다가오는 일정</h4><p class="note">불러오는 중…</p></div>
+      <div class="card gcal-upcoming" data-limit="8"><h4>다가오는 일정</h4><p class="note">불러오는 중…</p></div>
     </div>
     <div class="card home-cal"><div class="gcal" data-upcoming=".gcal-upcoming" data-more="news/calendar.html"></div></div>
   </div>

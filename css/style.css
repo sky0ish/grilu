@@ -567,3 +567,15 @@ form.board-search button.on,form.board-search button.line.on{background:var(--gr
 .quick.quick2 a{padding:9px 10px;font-size:13.5px;gap:8px;white-space:nowrap}
 .quick.quick2 .ico{width:30px;height:30px;font-size:15px}
 @media (max-width:1280px){.quick.quick2 ul{grid-template-columns:repeat(2,1fr)}}
+/* 3×2 버튼을 키워 왼쪽 열 아래 여백을 줄임 */
+.quick.quick2 ul{gap:12px}
+.quick.quick2 a{padding:24px 14px;font-size:15px;gap:10px;border-radius:12px}
+.quick.quick2 .ico{width:44px;height:44px;font-size:21px}
+.gcal-upcoming .up-item{padding:12px 0}
+
+/* 달력 일정 색: 톤다운 파스텔·반투명, 글자는 진하게 */
+.gc-ev{color:#1f2a44;font-weight:600;border:1px solid rgba(255,255,255,.6)}
+.gc-ev em{opacity:.75}
+.gc-ev:hover{filter:brightness(.96)}
+.gcal-type{color:#1f2a44}
+.gc-legend i{border:1px solid rgba(0,0,0,.08)}
