@@ -120,28 +120,51 @@ assert len(TOPICS) == 100, len(TOPICS)
 
 SPEAKER = re.compile(r"^○\s*\S+(\s+\S+)?\s*(위원장|부위원장|위원|의원|국장|과장|실장|본부장|원장|부원장|지사|부지사|청장|처장|팀장|단장|담당관)?\s*")
 import datetime as _dt
-RECENT_FROM = (_dt.date.today() - _dt.timedelta(days=365 * 5)).isoformat()   # 최근 5년 기준일
+RECENT_FROM = (_dt.date.today() - _dt.timedelta(days=365 * 5)).isoformat()   # 최근 5년 기준일 (×2)
+MID_FROM = (_dt.date.today() - _dt.timedelta(days=365 * 10)).isoformat()     # 6~10년 기준일 (×1.5)
 def is_recent(date): return (date or "") >= RECENT_FROM
-def gist(sentences, p, n=3):
-    """지적 문장 가운데 대표 문장 n개를 짧게 (지적 요지) — 최근 회차부터, 같은 회차면 지적성 표현이 많은 문장"""
+def years_ago(date):
+    try: d = _dt.date.fromisoformat(date[:10])
+    except Exception: return 99
+    return int((_dt.date.today() - d).days // 365.25)
+def weight(date): return max(1.0, round(2.0 - 0.1 * years_ago(date), 1))   # 올해 2.0, 1년 전 1.9 … 10년 전부터 1.0
+STOPW = {"관련", "요구", "지적", "부족", "필요", "운영", "관리", "대응", "연구", "기능", "역할", "문제", "우려", "적정성", "실효성", "미흡", "강화", "확대", "개선", "정책연구", "사항"}
+def gist(sentences, p, n=3, content=""):
+    """지적 문장 가운데 '무엇을 어떻게 지적했는지'가 드러나는 문장 n개 — 최근 연도부터 한 연도에 하나씩.
+       점수: 주제어와 지적어가 가까울수록, 주제 설명의 낱말(예: 제출·지연·불성실)이 들어갈수록, 숫자·기간 등 구체적일수록 높게."""
+    bonus = {w for w in re.findall(r"[가-힣]{2,}", content) if w not in STOPW}
     cands = []
     for x, date in sentences:
-        if not (p.search(x) and FLAG.search(x)): continue
+        m = p.search(x)
+        if not m or not FLAG.search(x): continue
         t = SPEAKER.sub("", x).strip()
         t = re.sub(r"^(그래서|그런데|그리고|그러니까|그러면|근데|이제|지금|좀|또|아까|사실|일단|예|네|아니|저기|우리|저희|본 위원이|제가)\s+", "", t)
-        sc = len(set(FLAG.findall(t))) * 2 + (2 if 25 <= len(t) <= 140 else 0) - (2 if "감사합니다" in t else 0)
+        m2 = p.search(t)
+        if not m2: continue
+        if all(t[mm.end():mm.end() + 1] == "님" for mm in p.finditer(t)): continue      # "부원장님?" 처럼 호칭으로만 쓰인 문장 제외
+        near = min((abs(f.start() - m2.start()) for f in FLAG.finditer(t)), default=999)
+        sc = (6 if near <= 30 else 3 if near <= 80 else 0) + 2 * len(set(FLAG.findall(t))) + 3 * sum(1 for w in bonus if w in t)
+        sc += 2 if re.search(r"\d", t) else 0
+        sc += 2 if 40 <= len(t) <= 260 else (-4 if len(t) < 30 else -1)
+        sc -= 4 if re.search(r"감사합니다|부탁드립니다|말씀드리겠습니다$|께서는$", t) else 0
+        sc -= 3 if t.count("?") == 0 and t.endswith("요.") and len(t) < 45 else 0
         cands.append((date, sc, t))
-    cands.sort(key=lambda c: (c[0], c[1]), reverse=True)
-    out, seen_year, seen = [], set(), set()
-    for date, sc, t in cands:                      # 서로 다른 연도에서 하나씩 (최근부터)
-        key = t[:20]
-        if key in seen or date[:4] in seen_year: continue
-        seen.add(key); seen_year.add(date[:4])
-        out.append(f"[{date[:4]}] " + (t if len(t) <= 90 else t[:88].rsplit(" ", 1)[0] + "…"))
+    if not cands: return []
+    cands.sort(key=lambda c: (c[0][:4], c[1]), reverse=True)     # 연도 내림차순, 같은 연도면 점수순
+    out, seen_year = [], set()
+    top = max(c[1] for c in cands)
+    for date, sc, t in cands:
+        if date[:4] in seen_year or sc < max(6, top - 8): continue
+        seen_year.add(date[:4])
+        if len(t) > 260: t = t[:258].rsplit(" ", 1)[0] + "…"
+        h = html.escape(t)
+        h = p.sub(lambda mm: "<mark style='background:#fff2a8;padding:0 2px'>" + mm.group(0) + "</mark>", h)
+        h = FLAG.sub(lambda mm: "<b>" + mm.group(0) + "</b>", h)
+        out.append(f"<span class='note'>[{date[:4]}]</span> " + h)
         if len(out) >= n: break
     return out
 
-def evidence(pat, word):
+def evidence(pat, word, content=""):
     p = re.compile(pat); hits = []; allsent = []
     for r in audit:
         ss = sents(r["body"])
@@ -149,19 +172,19 @@ def evidence(pat, word):
         if n: hits.append((n, r)); allsent.extend((s, r["date"]) for s in ss if p.search(s) and FLAG.search(s))
     hits.sort(key=lambda x: x[1]["date"], reverse=True)          # 최근 회차부터
     posts, total = len(hits), sum(n for n, _ in hits)
-    recent = sum(n for n, r in hits if is_recent(r["date"])); old = total - recent
-    score = recent * 2 + old
+    score = round(sum(n * weight(r["date"]) for n, r in hits), 1)
+    detail = " + ".join(f"{r['date'][:4]}년 {n}회×{weight(r['date']):g}" for n, r in hits[:5]) + (f" + … (외 {posts - 5}회차)" if posts > 5 else "")
     if not hits: return (0, 0, 0, "게시판 언급 없음", "-", "")
-    g = gist(allsent, p)
-    gist_html = "".join(f"<div style='margin-bottom:6px'>· {html.escape(t)}</div>" for t in g)
+    g = gist(allsent, p, 3, content)
+    gist_html = "".join(f"<div style='margin-bottom:8px'>· {t}</div>" for t in g)
     links = "<br>".join(f'<a href="../../gri/audit/{r["id"]}.html?kw={word}" title="{html.escape(r["title"])}">{r["date"][:4]}년 {r["committee"]}</a> <span class="note">({n}회{"·최근" if is_recent(r["date"]) else ""})</span>' for n, r in hits[:4])
     if posts > 4: links += f'<br><span class="note">외 {posts - 4}회차 (오래된 순)</span>'
-    return (score, posts, total, f"<b>{posts}회차</b> 감사 / <b>{total}회</b> 언급<br><span class='note'>가중 점수 <b>{score}</b> = 최근 5년 {recent}회×2 + 이전 {old}회</span>", links, gist_html)
+    return (score, posts, total, f"<b>{posts}회차</b> 감사 / <b>{total}회</b> 언급<br><span class='note'>가중 점수 <b>{score:g}</b> = {detail}</span>", links, gist_html)
 
 if not os.environ.get("AUDIT_TOPICS_ONLY"):
     rows = []
     for content, memo, pat, word in TOPICS:
-        score, posts, total, c, l, g = evidence(pat, word)
+        score, posts, total, c, l, g = evidence(pat, word, content)
         rows.append((score, posts, content, memo + "<br>" + c, l, g))
     rows.sort(key=lambda x: (-x[0], -x[1]))
     rows = rows[:100]
@@ -169,7 +192,7 @@ if not os.environ.get("AUDIT_TOPICS_ONLY"):
     trs = "".join(f"<tr><td>{i + 1}</td><td>{c}</td><td>{m}</td><td>{l}</td><td style='font-size:13px;color:#444;line-height:1.6'>{g}</td></tr>" for i, (_, _, c, m, l, g) in enumerate(rows))
     body = ("<p>경기도의회 행정사무감사 회의록 31건(제4대 1995년 ~ 제11대 2025년, 경기연구원 피감 회의)에서 <b>여러 회차에 걸쳐 반복 지적된 사항</b>을 100개 주제로 묶어 정리했습니다. "
             "언급 횟수는 '지적·문제·개선·미흡·필요' 등 지적성 표현이 들어간 문장 가운데 해당 주제가 나온 문장 수이며, 대표 회의자료를 누르면 해당 낱말이 형광 표시된 회의록 전문이 열립니다.</p>"
-            f"<div class='box' style='margin:12px 0 16px'><b>순위 계산식</b> &nbsp; 가중 점수 = (최근 5년 회차의 지적 문장 수 × <b>2</b>) + (그 이전 회차의 지적 문장 수 × 1) &nbsp;·&nbsp; 최근 5년 기준일 {RECENT_FROM} &nbsp;·&nbsp; 점수가 같으면 지적된 회차 수가 많은 순. "
+            f"<div class='box' style='margin:12px 0 16px'><b>순위 계산식</b> &nbsp; 가중 점수 = Σ(회차별 지적 문장 수 × 가중치), 가중치 = 2 − 0.1 × 경과 연수 (올해 2.0, 1년 전 1.9, 2년 전 1.8 … 10년 전부터는 1.0) &nbsp;·&nbsp; 기준일 {_dt.date.today().isoformat()} &nbsp;·&nbsp; 점수가 같으면 지적된 회차 수가 많은 순. "
             "대표 회의자료와 지적 요지는 <b>최근 회차부터</b> 보여 줍니다. 오래된 지적은 중요도를 낮게 보되 완전히 빼지는 않습니다.</div>"
             f"<table class='doc-table'><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>"
             "<p class='note'>※ 회의록 발언을 주제별로 자동 집계한 것이라 문맥에 따라 지적이 아닌 언급이 일부 포함될 수 있습니다. 정확한 내용은 링크된 회의록 원문에서 확인하세요.</p>")
