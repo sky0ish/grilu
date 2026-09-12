@@ -401,9 +401,12 @@ mark.kw-hit.cur{background:#f39800;color:#fff}
 .rules-body .rule-hist summary{cursor:pointer;color:var(--primary)}
 @media (max-width:800px){.rule-parts{grid-template-columns:1fr}.rule-toc{columns:1}}
 
-/* 게시판 검색: 게시판내 / 전체 */
+/* 게시판 검색: 게시판내 / 전체 — 누른 단추는 .on (주황으로 채워 어느 쪽인지 보이게) */
 .board-top form.board-search button.line{background:#fff;color:var(--primary);border:1px solid var(--primary)}
 .board-top form.board-search button{white-space:nowrap}
+form.board-search button{transition:background .15s,color .15s,box-shadow .15s}
+form.board-search button.on,form.board-search button.line.on{background:var(--gri-orange);border-color:var(--gri-orange);color:#fff;font-weight:700;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.22)}
 @media (max-width:640px){.board-top{flex-direction:column;align-items:stretch;gap:8px}.board-top form{flex-wrap:wrap}}
 
 /* 페이지 제목 오른쪽 검색창 */

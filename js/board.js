@@ -115,12 +115,16 @@
     if (!form) return;
     var inp = form.querySelector('input'); if (inp) inp.value = q || '';
     var sel = form.querySelector('select'); if (sel && f) sel.value = f;
+    /* 어느 단추를 눌렀는지 — 누른 단추에 .on (색이 바뀜). 검색 결과 화면(?q=)에서는 「게시판내 검색」 이 눌린 채로 */
+    var inb = form.querySelector('.in-board'), all = form.querySelector('.all-site');
+    var mark = function (btn) { form.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b === btn); }); };
+    if (q && inb) mark(inb);
     form.onsubmit = function () {
       var v = inp.value.trim(); if (!v) { inp.focus(); return false; }
+      mark(inb);
       location.href = listUrl(code) + '?q=' + encodeURIComponent(v) + (sel && sel.value !== 'all' ? '&f=' + sel.value : ''); return false;
     };
-    var all = form.querySelector('.all-site');
-    if (all) all.onclick = function () { var v = inp.value.trim(); if (!v) { inp.focus(); return; } location.href = DB.root + 'board/search.html?q=' + encodeURIComponent(v); };
+    if (all) all.onclick = function () { var v = inp.value.trim(); if (!v) { inp.focus(); return; } mark(all); location.href = DB.root + 'board/search.html?q=' + encodeURIComponent(v); };
   }
 
   // ---------- 경기도의회 회의록 (정적 data/assembly.json, 글은 gri/assembly/<id>.html) ----------
