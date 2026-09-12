@@ -579,3 +579,6 @@ form.board-search button.on,form.board-search button.line.on{background:var(--gr
 .gc-ev:hover{filter:brightness(.96)}
 .gcal-type{color:#1f2a44}
 .gc-legend i{border:1px solid rgba(0,0,0,.08)}
+/* 바로가기 버튼 더 크게 */
+.quick.quick2 a{padding:34px 16px;font-size:16px;gap:12px}
+.quick.quick2 .ico{width:52px;height:52px;font-size:24px}
