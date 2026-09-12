@@ -945,7 +945,7 @@ JOIN = """
 <p>홈페이지 회원가입은 조합원 확인 후 승인됩니다. 이메일이 로그인 아이디가 됩니다.</p>
 <form id="joinForm">
 <table class="tbl form-tbl">
-<tr><th>성명</th><td><input type="text" name="name" required></td></tr><tr><th>소속(부서명)</th><td><input type="text" name="dept" placeholder="예: 도시주택연구실" required></td></tr>
+<tr><th>성명</th><td><input type="text" name="name" required></td></tr><tr><th>소속(부서명)</th><td><input type="text" name="dept" placeholder="예) 공투센터 / ○○○○실" required></td></tr>
 <tr><th>직급</th><td><select name="position" required><option value="">선택</option><option>선임연구위원</option><option>연구위원</option><option>공무직_연구원</option><option>공무직_행정원</option><option>행정관리직</option><option>계약직_연구직</option><option>계약직_공무직</option></select></td></tr>
 <tr><th>이메일</th><td><input type="email" name="email" required autocomplete="username"></td></tr>
 <tr><th>비밀번호</th><td><input type="password" name="password" required minlength="6" autocomplete="new-password"></td></tr>
@@ -963,7 +963,7 @@ MYPAGE = """
 <form id="myForm"><table class="tbl form-tbl">
 <tr><th>이메일</th><td><input type="email" name="email" disabled></td></tr>
 <tr><th>성명</th><td><input type="text" name="name"></td></tr>
-<tr><th>소속(부서명)</th><td><input type="text" name="dept"></td></tr>
+<tr><th>소속(부서명)</th><td><input type="text" name="dept" placeholder="예) 공투센터 / ○○○○실"></td></tr>
 <tr><th>직급</th><td><select name="position"><option value="">선택</option><option>선임연구위원</option><option>연구위원</option><option>공무직_연구원</option><option>공무직_행정원</option><option>행정관리직</option><option>계약직_연구직</option><option>계약직_공무직</option></select></td></tr>
 <tr><th>새 비밀번호</th><td><input type="password" name="password" placeholder="변경할 때만 입력" autocomplete="new-password"></td></tr>
 </table><div class="board-bottom" style="justify-content:center"><button type="submit" class="btn">저장</button></div></form>
