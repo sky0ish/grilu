@@ -53,7 +53,7 @@
         var name = (DB.profile && DB.profile.name) || DB.user.email;
         var status = DB.isAdmin() ? ' <b style="color:var(--gri-orange)">관리자</b>' : (DB.isMember() ? '' : ' <span style="color:#c33">(승인 대기)</span>');
         util.innerHTML = '<span style="padding:0 10px;color:#333">' + DB.esc(name) + '님' + status + '</span>' +
-          (DB.isAdmin() ? '<a href="' + root + 'admin/members.html?filter=pending" id="memberMgrLink">회원관리</a>' : '') +
+          (DB.isAdmin() ? '<a href="' + root + 'admin/members.html" id="memberMgrLink">회원관리</a>' : '') +
           '<a href="' + root + 'member/mypage.html">내 정보</a>' +
           '<a href="#" id="logoutBtn">로그아웃</a>';
         if (DB.isAdmin()) {

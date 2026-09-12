@@ -46,6 +46,7 @@
 
   // ---------- 회원관리 ----------
   var members = [];
+  var TABS = [['pending', '승인 대기'], ['approved', '승인됨'], ['admin', '관리자'], ['all', '전체']];
   function initMembers() {
     var q = new URLSearchParams(location.search);
     var filter = document.getElementById('memberFilter');
@@ -53,7 +54,32 @@
     document.getElementById('memberSearch').addEventListener('input', renderMembers);
     filter.addEventListener('change', renderMembers);
     document.getElementById('memberCsv').addEventListener('click', exportCsv);
+    /* 「회원관리 명단을 종류별로 볼 수 있게」 — 고르개 대신 갈래 단추. 수는 명단을 읽은 뒤 채웁니다 */
+    var tools = filter.parentNode;
+    var nav = document.createElement('div'); nav.id = 'memberTabs'; nav.className = 'mtabs';
+    nav.innerHTML = TABS.map(function (t) { return '<button type="button" class="mtab" data-k="' + t[0] + '">' + t[1] + ' <b class="n">0</b></button>'; }).join('');
+    tools.parentNode.insertBefore(nav, tools);
+    filter.style.display = 'none';
+    var st = document.createElement('style');
+    st.textContent = '.mtabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}.mtab{border:1px solid #d8d3cc;background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer;color:#333}' +
+      '.mtab .n{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:999px;background:#eee;color:#555;font-size:12px;line-height:20px;text-align:center}' +
+      '.mtab.on{background:var(--primary,#1f3f8f);border-color:var(--primary,#1f3f8f);color:#fff}.mtab.on .n{background:rgba(255,255,255,.25);color:#fff}' +
+      '.mtab[data-k=pending] .n.has{background:#fde8e8;color:#c33}.mtab.on[data-k=pending] .n.has{background:#fff;color:#c33}' +
+      '.tbl .btn.line.sm{background:#fff;color:#333;border:1px solid #cfc8c0}.tbl .btn.line.sm:hover{border-color:var(--primary,#1f3f8f);color:var(--primary,#1f3f8f)}';
+    document.head.appendChild(st);
+    nav.querySelectorAll('.mtab').forEach(function (b) { b.onclick = function () { filter.value = b.getAttribute('data-k'); renderMembers(); }; });
     loadMembers();
+  }
+  function isPending(p) { return !p.approved && p.role !== 'admin'; }
+  function paintTabs() {
+    var f = document.getElementById('memberFilter').value;
+    var n = { pending: 0, approved: 0, admin: 0, all: members.length };
+    members.forEach(function (p) { if (p.role === 'admin') n.admin++; else if (p.approved) n.approved++; else n.pending++; });
+    document.querySelectorAll('#memberTabs .mtab').forEach(function (b) {
+      var k = b.getAttribute('data-k');
+      b.classList.toggle('on', k === f);
+      var nb = b.querySelector('.n'); nb.textContent = n[k]; nb.classList.toggle('has', k === 'pending' && n[k] > 0);
+    });
   }
   function loadMembers() {
     DB.client.from('profiles').select('*').order('created_at', { ascending: false }).then(function (r) {
@@ -71,11 +97,15 @@
       if (f === 'admin' && p.role !== 'admin') return false;
       if (kw && ((p.name || '') + ' ' + (p.email || '') + ' ' + (p.dept || '') + ' ' + (p.position || '')).toLowerCase().indexOf(kw) < 0) return false;
       return true;
+    }).sort(function (a, b) {
+      /* 승인 대기를 맨 위에, 그다음 가입 차례 — 전체 보기에서도 할 일이 먼저 보이게 */
+      return (isPending(a) ? 0 : 1) - (isPending(b) ? 0 : 1) || String(b.created_at || '').localeCompare(String(a.created_at || ''));
     });
   }
   function renderMembers() {
     var tb = document.querySelector('#memberTbl tbody');
     var list = filtered();
+    paintTabs();
     document.getElementById('memberCount').textContent = list.length + '명 / 전체 ' + members.length + '명';
     if (!list.length) { tb.innerHTML = '<tr><td colspan="7" style="padding:30px;color:#888">해당하는 회원이 없습니다.</td></tr>'; return; }
     var me = DB.user.id;
@@ -94,6 +124,9 @@
             '<option value="member"' + (grade === 'member' ? ' selected' : '') + '>회원</option>' +
             '<option value="admin"' + (grade === 'admin' ? ' selected' : '') + '>관리자</option></select> ') +
         '<button class="btn sm" data-act="save">' + (grade === 'pending' && !self ? '가입 승인' : '저장') + '</button> ' +
+        /* 고르개를 거치지 않고 한 번에 — 「내가 회원에서 관리자로 올릴 수 있게」 */
+        (self ? '' : grade === 'member' ? '<button class="btn line sm" data-act="admin">관리자로</button> <button class="btn line sm" data-act="revoke">승인 취소</button> '
+              : grade === 'admin' ? '<button class="btn line sm" data-act="unadmin">관리자 해제</button> ' : '') +
         (self ? '' : '<button class="btn sm danger" data-act="delete">탈퇴</button>') +
         '</td></tr>';
     }).join('');
