@@ -118,29 +118,59 @@ TOPICS = [
 ]
 assert len(TOPICS) == 100, len(TOPICS)
 
+SPEAKER = re.compile(r"^○\s*\S+(\s+\S+)?\s*(위원장|부위원장|위원|의원|국장|과장|실장|본부장|원장|부원장|지사|부지사|청장|처장|팀장|단장|담당관)?\s*")
+import datetime as _dt
+RECENT_FROM = (_dt.date.today() - _dt.timedelta(days=365 * 5)).isoformat()   # 최근 5년 기준일
+def is_recent(date): return (date or "") >= RECENT_FROM
+def gist(sentences, p, n=3):
+    """지적 문장 가운데 대표 문장 n개를 짧게 (지적 요지) — 최근 회차부터, 같은 회차면 지적성 표현이 많은 문장"""
+    cands = []
+    for x, date in sentences:
+        if not (p.search(x) and FLAG.search(x)): continue
+        t = SPEAKER.sub("", x).strip()
+        t = re.sub(r"^(그래서|그런데|그리고|그러니까|그러면|근데|이제|지금|좀|또|아까|사실|일단|예|네|아니|저기|우리|저희|본 위원이|제가)\s+", "", t)
+        sc = len(set(FLAG.findall(t))) * 2 + (2 if 25 <= len(t) <= 140 else 0) - (2 if "감사합니다" in t else 0)
+        cands.append((date, sc, t))
+    cands.sort(key=lambda c: (c[0], c[1]), reverse=True)
+    out, seen_year, seen = [], set(), set()
+    for date, sc, t in cands:                      # 서로 다른 연도에서 하나씩 (최근부터)
+        key = t[:20]
+        if key in seen or date[:4] in seen_year: continue
+        seen.add(key); seen_year.add(date[:4])
+        out.append(f"[{date[:4]}] " + (t if len(t) <= 90 else t[:88].rsplit(" ", 1)[0] + "…"))
+        if len(out) >= n: break
+    return out
+
 def evidence(pat, word):
-    p = re.compile(pat); hits = []
+    p = re.compile(pat); hits = []; allsent = []
     for r in audit:
-        n = sum(1 for s in sents(r["body"]) if p.search(s) and FLAG.search(s))
-        if n: hits.append((n, r))
-    hits.sort(key=lambda x: -x[0])
+        ss = sents(r["body"])
+        n = sum(1 for s in ss if p.search(s) and FLAG.search(s))
+        if n: hits.append((n, r)); allsent.extend((s, r["date"]) for s in ss if p.search(s) and FLAG.search(s))
+    hits.sort(key=lambda x: x[1]["date"], reverse=True)          # 최근 회차부터
     posts, total = len(hits), sum(n for n, _ in hits)
-    if not hits: return (0, 0, "게시판 언급 없음", "-")
-    links = "<br>".join(f'<a href="../../gri/audit/{r["id"]}.html?kw={word}" title="{html.escape(r["title"])}">{r["date"][:4]}년 {r["committee"]}</a> <span class="note">({n}회)</span>' for n, r in hits[:4])
-    if posts > 4: links += f'<br><span class="note">외 {posts - 4}회차</span>'
-    return (posts, total, f"<b>{posts}회차</b> 감사 / <b>{total}회</b> 언급", links)
+    recent = sum(n for n, r in hits if is_recent(r["date"])); old = total - recent
+    score = recent * 2 + old
+    if not hits: return (0, 0, 0, "게시판 언급 없음", "-", "")
+    g = gist(allsent, p)
+    gist_html = "".join(f"<div style='margin-bottom:6px'>· {html.escape(t)}</div>" for t in g)
+    links = "<br>".join(f'<a href="../../gri/audit/{r["id"]}.html?kw={word}" title="{html.escape(r["title"])}">{r["date"][:4]}년 {r["committee"]}</a> <span class="note">({n}회{"·최근" if is_recent(r["date"]) else ""})</span>' for n, r in hits[:4])
+    if posts > 4: links += f'<br><span class="note">외 {posts - 4}회차 (오래된 순)</span>'
+    return (score, posts, total, f"<b>{posts}회차</b> 감사 / <b>{total}회</b> 언급<br><span class='note'>가중 점수 <b>{score}</b> = 최근 5년 {recent}회×2 + 이전 {old}회</span>", links, gist_html)
 
 if not os.environ.get("AUDIT_TOPICS_ONLY"):
     rows = []
     for content, memo, pat, word in TOPICS:
-        posts, total, c, l = evidence(pat, word)
-        rows.append((total, posts, content, memo + "<br>" + c, l))
+        score, posts, total, c, l, g = evidence(pat, word)
+        rows.append((score, posts, content, memo + "<br>" + c, l, g))
     rows.sort(key=lambda x: (-x[0], -x[1]))
     rows = rows[:100]
-    th = "".join(f"<th>{h}</th>" for h in ["순위", "지적사항 내용", "근거(게시판 자료) · 언급 횟수", "대표 회의자료(링크)"])
-    trs = "".join(f"<tr><td>{i + 1}</td><td>{c}</td><td>{m}</td><td>{l}</td></tr>" for i, (_, _, c, m, l) in enumerate(rows))
+    th = "".join(f"<th>{h}</th>" for h in ["순위", "지적사항 내용", "근거(게시판 자료) · 언급 횟수", "대표 회의자료(링크)", "지적 요지 (회의록 발언 발췌)"])
+    trs = "".join(f"<tr><td>{i + 1}</td><td>{c}</td><td>{m}</td><td>{l}</td><td style='font-size:13px;color:#444;line-height:1.6'>{g}</td></tr>" for i, (_, _, c, m, l, g) in enumerate(rows))
     body = ("<p>경기도의회 행정사무감사 회의록 31건(제4대 1995년 ~ 제11대 2025년, 경기연구원 피감 회의)에서 <b>여러 회차에 걸쳐 반복 지적된 사항</b>을 100개 주제로 묶어 정리했습니다. "
             "언급 횟수는 '지적·문제·개선·미흡·필요' 등 지적성 표현이 들어간 문장 가운데 해당 주제가 나온 문장 수이며, 대표 회의자료를 누르면 해당 낱말이 형광 표시된 회의록 전문이 열립니다.</p>"
+            f"<div class='box' style='margin:12px 0 16px'><b>순위 계산식</b> &nbsp; 가중 점수 = (최근 5년 회차의 지적 문장 수 × <b>2</b>) + (그 이전 회차의 지적 문장 수 × 1) &nbsp;·&nbsp; 최근 5년 기준일 {RECENT_FROM} &nbsp;·&nbsp; 점수가 같으면 지적된 회차 수가 많은 순. "
+            "대표 회의자료와 지적 요지는 <b>최근 회차부터</b> 보여 줍니다. 오래된 지적은 중요도를 낮게 보되 완전히 빼지는 않습니다.</div>"
             f"<table class='doc-table'><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>"
             "<p class='note'>※ 회의록 발언을 주제별로 자동 집계한 것이라 문맥에 따라 지적이 아닌 언급이 일부 포함될 수 있습니다. 정확한 내용은 링크된 회의록 원문에서 확인하세요.</p>")
     d = json.load(open(P, encoding="utf-8"))

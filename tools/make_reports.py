@@ -170,8 +170,7 @@ def evidence(key):
     for q in src_posts:
         n = len(pat.findall(q["text"]))
         if n: hits.append((n, q))
-    hits.sort(key=lambda x: (-x[0], x[1]["date"]), reverse=False)
-    hits.sort(key=lambda x: -x[0])
+    hits.sort(key=lambda x: x[1]["date"], reverse=True)          # 대표 회의자료는 최근 것부터
     total_posts = len(hits); total_sent = sum(n for n, _ in hits)
     if not hits: return ("게시판 언급 없음", "-")
     top = hits[:4]
