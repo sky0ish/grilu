@@ -611,7 +611,8 @@ def p_audit(root):
         data = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "audit.json"), encoding="utf-8"))
     except Exception:
         data = []
-    rows = [(len(data) - i, f'{r["title"]} — {r["committee"]}', "경기도의회", r["date"], "-", f'audit/{r["id"]}.html', "audit-" + r["id"]) for i, r in enumerate(data)]
+    def _t(r): return f'{r["title"]} — {r["committee"]}' + (' <span class="note">핵심: ' + "·".join(r["topics"]) + '</span>' if r.get("topics") else "")
+    rows = [(len(data) - i, _t(r), "경기도의회", r["date"], "-", f'audit/{r["id"]}.html', "audit-" + r["id"]) for i, r in enumerate(data)]
     kwmap = {"audit-" + r["id"]: r.get("keywords") or {} for r in data}
     intro = """
 <p>제4대(1995년)부터 제11대(2025년)까지 행정사무감사 회의록 중 경기연구원이 피감기관으로 포함된 회의입니다. 제목을 누르면 본문 전문과 원문 링크를 볼 수 있습니다.</p>
@@ -636,7 +637,7 @@ def audit_pages():
   <div class="post-head" style="border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px">
     <span class="badge" style="font-size:12px;color:#fff;background:var(--primary);padding:2px 8px;border-radius:4px">제{r["daesu"]}대 경기도의회 · {r["committee"]}</span>
     <h4 style="border:0;padding:0;margin:8px 0 6px;color:#222;font-size:24px">{r["title"]}</h4>
-    <div class="note">{r["audit"]} &nbsp;|&nbsp; 회의일 {r["date"]} &nbsp;|&nbsp; 출처 경기도의회 회의록시스템</div>
+    <div class="note">{r["audit"]} &nbsp;|&nbsp; 회의일 {r["date"]} &nbsp;|&nbsp; 출처 경기도의회 회의록시스템{(" &nbsp;|&nbsp; 핵심 안건: <b>" + "·".join(r["topics"]) + "</b>") if r.get("topics") else ""}</div>
   </div>
   <script type="application/json" class="kw-data">{__import__("json").dumps(r.get("keywords") or {}, ensure_ascii=False)}</script>
   <div class="post-body minutes" style="line-height:1.85;font-size:15px">{r["body"] or "<p class='note'>본문은 원문 링크에서 확인하세요.</p>"}</div>
@@ -900,6 +901,7 @@ def index():
         <ul class="list compact" data-latest="regulation" data-limit="5" data-badge="규정|reg">{li(regs, code="regulation", badge=("규정", "reg"))}</ul>
         <div class="link-cards">
           <a href="{GW_REG_URL}" target="_blank" rel="noopener" class="c1"><span class="ico">&#128194;</span><span>그룹웨어 규정 및 지침<span>원문 보기 (내부망 로그인)</span></span></a>
+          <a href="gri/audit.html" class="c4"><span class="ico">&#128203;</span><span>행정사무감사<span>경기도의회 행정사무감사 회의록 (경기연구원 피감)</span></span></a>
         </div>
       </div>
       <div class="card">

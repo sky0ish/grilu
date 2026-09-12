@@ -594,3 +594,7 @@ form.board-search button.on,form.board-search button.line.on{background:var(--gr
 .link-cards a span{color:#555;opacity:1}
 .link-cards .c1{background:linear-gradient(135deg,rgba(196,180,232,.55),rgba(220,208,244,.55))}
 .link-cards .c3{background:linear-gradient(135deg,rgba(150,205,215,.5),rgba(190,225,232,.5))}
+
+.link-cards .c4{background:linear-gradient(135deg,rgba(170,195,235,.55),rgba(205,222,245,.55))}
+/* 행정사무감사 카드: 연회색 */
+.link-cards .c4{background:linear-gradient(135deg,rgba(200,204,212,.55),rgba(226,229,235,.55))}

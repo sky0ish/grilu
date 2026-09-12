@@ -131,7 +131,7 @@ def write_sql(found):
                    f'<a href="{r["url"]}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">경기도의회 원문</a></div>'
                    f'<p style="line-height:1.8;color:#444">{html.escape(excerpt(r["body"]))}</p>')
         att = json.dumps({"legacy_id": "audit-" + r["id"], "files": [], "source": "kms.ggc.go.kr 행정사무감사", "url": r["url"], "page": page}, ensure_ascii=False)
-        title = f'{r["title"]} — {r["committee"]} {r["audit"].split("(")[0].strip()}'
+        title = f'{r["title"]} — {r["committee"]} {r["audit"].split("(")[0].strip()}' + (" · 핵심: " + "·".join(r["topics"]) if r.get("topics") else "")
         out.append(f"insert into public.posts (board,title,content,author_name,is_notice,attachments,created_at,updated_at) "
                    f"select 'audit',{q(title)},{q(content)},'경기도의회',false,{q(att)}::jsonb,{q(r['date'] or '2000-01-01')}::date,{q(r['date'] or '2000-01-01')}::date "
                    f"where not exists (select 1 from public.posts where attachments->>'legacy_id' = {q('audit-' + r['id'])});")

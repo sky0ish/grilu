@@ -130,23 +130,24 @@ def evidence(pat, word):
     if posts > 4: links += f'<br><span class="note">외 {posts - 4}회차</span>'
     return (posts, total, f"<b>{posts}회차</b> 감사 / <b>{total}회</b> 언급", links)
 
-rows = []
-for content, memo, pat, word in TOPICS:
-    posts, total, c, l = evidence(pat, word)
-    rows.append((total, posts, content, memo + "<br>" + c, l))
-rows.sort(key=lambda x: (-x[0], -x[1]))
-rows = rows[:100]
-th = "".join(f"<th>{h}</th>" for h in ["순위", "지적사항 내용", "근거(게시판 자료) · 언급 횟수", "대표 회의자료(링크)"])
-trs = "".join(f"<tr><td>{i + 1}</td><td>{c}</td><td>{m}</td><td>{l}</td></tr>" for i, (_, _, c, m, l) in enumerate(rows))
-body = ("<p>경기도의회 행정사무감사 회의록 31건(제4대 1995년 ~ 제11대 2025년, 경기연구원 피감 회의)에서 <b>여러 회차에 걸쳐 반복 지적된 사항</b>을 100개 주제로 묶어 정리했습니다. "
-        "언급 횟수는 '지적·문제·개선·미흡·필요' 등 지적성 표현이 들어간 문장 가운데 해당 주제가 나온 문장 수이며, 대표 회의자료를 누르면 해당 낱말이 형광 표시된 회의록 전문이 열립니다.</p>"
-        f"<table class='doc-table'><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>"
-        "<p class='note'>※ 회의록 발언을 주제별로 자동 집계한 것이라 문맥에 따라 지적이 아닌 언급이 일부 포함될 수 있습니다. 정확한 내용은 링크된 회의록 원문에서 확인하세요.</p>")
-d = json.load(open(P, encoding="utf-8"))
-d["posts"] = [p for p in d["posts"] if p["id"] != "report-audit"]
-text = html.unescape(re.sub(r"<[^>]+>", " ", body))
-today = __import__("datetime").date.today().isoformat()
-d["posts"].insert(0, {"id": "report-audit", "code": "documents", "sub": "게시판 분석 자료", "title": f"행정사무감사 반복 지적사항 TOP 100 ({today} 기준)", "author": "관리자", "dept": "노동조합",
-                      "date": today, "body_html": body, "body_text": text, "atts": []})
-json.dump(d, open(P, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-print("audit report added:", len(rows), "topics; top:", [(r[2][:20], r[0]) for r in rows[:5]])
+if not os.environ.get("AUDIT_TOPICS_ONLY"):
+    rows = []
+    for content, memo, pat, word in TOPICS:
+        posts, total, c, l = evidence(pat, word)
+        rows.append((total, posts, content, memo + "<br>" + c, l))
+    rows.sort(key=lambda x: (-x[0], -x[1]))
+    rows = rows[:100]
+    th = "".join(f"<th>{h}</th>" for h in ["순위", "지적사항 내용", "근거(게시판 자료) · 언급 횟수", "대표 회의자료(링크)"])
+    trs = "".join(f"<tr><td>{i + 1}</td><td>{c}</td><td>{m}</td><td>{l}</td></tr>" for i, (_, _, c, m, l) in enumerate(rows))
+    body = ("<p>경기도의회 행정사무감사 회의록 31건(제4대 1995년 ~ 제11대 2025년, 경기연구원 피감 회의)에서 <b>여러 회차에 걸쳐 반복 지적된 사항</b>을 100개 주제로 묶어 정리했습니다. "
+            "언급 횟수는 '지적·문제·개선·미흡·필요' 등 지적성 표현이 들어간 문장 가운데 해당 주제가 나온 문장 수이며, 대표 회의자료를 누르면 해당 낱말이 형광 표시된 회의록 전문이 열립니다.</p>"
+            f"<table class='doc-table'><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>"
+            "<p class='note'>※ 회의록 발언을 주제별로 자동 집계한 것이라 문맥에 따라 지적이 아닌 언급이 일부 포함될 수 있습니다. 정확한 내용은 링크된 회의록 원문에서 확인하세요.</p>")
+    d = json.load(open(P, encoding="utf-8"))
+    d["posts"] = [p for p in d["posts"] if p["id"] != "report-audit"]
+    text = html.unescape(re.sub(r"<[^>]+>", " ", body))
+    today = __import__("datetime").date.today().isoformat()
+    d["posts"].insert(0, {"id": "report-audit", "code": "documents", "sub": "게시판 분석 자료", "title": f"행정사무감사 반복 지적사항 TOP 100 ({today} 기준)", "author": "관리자", "dept": "노동조합",
+                          "date": today, "body_html": body, "body_text": text, "atts": []})
+    json.dump(d, open(P, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print("audit report added:", len(rows), "topics; top:", [(r[2][:20], r[0]) for r in rows[:5]])
