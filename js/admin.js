@@ -222,7 +222,11 @@
       b.onclick = function () {
         var tr = b.closest('tr'), id = tr.getAttribute('data-id'), act = b.getAttribute('data-act');
         var p = members.filter(function (x) { return x.id === id; })[0];
-        var done = function (r) { if (r && r.error) alert('실패: ' + r.error.message); loadMembers(); };
+        var done = function (r) {
+          if (r && r.error) alert('실패: ' + r.error.message);
+          else if (r && r.data && !r.data.length) alert('바뀌지 않았습니다 — 이 계정에 고칠 권한이 없거나 세션이 끊겼습니다. 다시 로그인한 뒤 눌러 주세요.');
+          loadMembers();
+        };
         if (act === 'save') {
           var patch = { name: tr.querySelector('[data-f=name]').value.trim(), dept: tr.querySelector('[data-f=dept]').value.trim(), position: tr.querySelector('[data-f=position]').value || null };
           var gsel = tr.querySelector('[data-f=grade]'), g = gsel ? gsel.value : null, cur = gradeOf(p);
@@ -230,17 +234,26 @@
             if (g === 'admin' && !confirm(p.email + ' 회원을 관리자로 지정할까요? (회원 관리·일정·게시판 관리 권한)')) return;
             patch.role = g === 'admin' ? 'admin' : g === 'associate' ? 'associate' : 'member'; patch.approved = true;
           }
-          return DB.client.from('profiles').update(patch).eq('id', id).then(function (r) { if (r.error) alert(r.error.message); else if (g && g !== cur) loadMembers(); else { b.textContent = '저장됨'; setTimeout(function () { b.textContent = '저장'; }, 1200); p.name = patch.name; p.dept = patch.dept; p.position = patch.position; } });
+          /* .select() 를 붙여 정말 몇 줄이 바뀌었는지 봅니다 — 접근 규칙(RLS)에 걸리면 오류 없이 0줄이라
+             전에는 「저장됨」 이라 해 놓고 새로 고치면 옛 이름으로 돌아왔습니다 */
+          return DB.client.from('profiles').update(patch).eq('id', id).select('id').then(function (r) {
+            if (r.error) return alert('저장 실패: ' + r.error.message);
+            if (!r.data || !r.data.length) return alert('저장되지 않았습니다 — 이 계정에 회원 정보를 고칠 권한이 없거나(관리자인지 확인), 세션이 끊겼습니다. 다시 로그인한 뒤 눌러 주세요.');
+            if (g && g !== cur) return loadMembers();
+            b.textContent = '저장됨'; setTimeout(function () { b.textContent = '저장'; }, 1200);
+            p.name = patch.name; p.dept = patch.dept; p.position = patch.position;
+            renderMembers();
+          });
         }
-        if (act === 'approve') return DB.client.from('profiles').update({ approved: true }).eq('id', id).then(done);
-        if (act === 'revoke') { if (!confirm(p.email + ' 회원의 승인을 취소할까요?')) return; return DB.client.from('profiles').update({ approved: false }).eq('id', id).then(done); }
-        if (act === 'admin') { if (!confirm(p.email + ' 회원을 관리자로 지정할까요?')) return; return DB.client.from('profiles').update({ role: 'admin', approved: true }).eq('id', id).then(done); }
-        if (act === 'unadmin') { if (!confirm('관리자 권한을 해제할까요? (승인 조합원으로 남습니다)')) return; return DB.client.from('profiles').update({ role: 'member' }).eq('id', id).then(done); }
-        if (act === 'member') return DB.client.from('profiles').update({ role: 'member', approved: true }).eq('id', id).then(done);
-        if (act === 'associate') return DB.client.from('profiles').update({ role: 'associate', approved: true }).eq('id', id).then(done);
+        if (act === 'approve') return DB.client.from('profiles').update({ approved: true }).eq('id', id).select('id').then(done);
+        if (act === 'revoke') { if (!confirm(p.email + ' 회원의 승인을 취소할까요?')) return; return DB.client.from('profiles').update({ approved: false }).eq('id', id).select('id').then(done); }
+        if (act === 'admin') { if (!confirm(p.email + ' 회원을 관리자로 지정할까요?')) return; return DB.client.from('profiles').update({ role: 'admin', approved: true }).eq('id', id).select('id').then(done); }
+        if (act === 'unadmin') { if (!confirm('관리자 권한을 해제할까요? (승인 조합원으로 남습니다)')) return; return DB.client.from('profiles').update({ role: 'member' }).eq('id', id).select('id').then(done); }
+        if (act === 'member') return DB.client.from('profiles').update({ role: 'member', approved: true }).eq('id', id).select('id').then(done);
+        if (act === 'associate') return DB.client.from('profiles').update({ role: 'associate', approved: true }).eq('id', id).select('id').then(done);
         if (act === 'delete') {
           if (!confirm(p.email + ' 회원을 탈퇴 처리할까요?\n홈페이지 회원 정보가 삭제되고 조합원 권한이 사라집니다.')) return;
-          return DB.client.from('profiles').delete().eq('id', id).then(done);
+          return DB.client.from('profiles').delete().eq('id', id).select('id').then(done);
         }
       };
     });
